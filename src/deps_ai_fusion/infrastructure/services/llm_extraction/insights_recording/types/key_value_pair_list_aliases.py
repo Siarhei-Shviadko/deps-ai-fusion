@@ -19,20 +19,13 @@ class KeyValuePairListWithAliasesInsightsRecorder(AbstractInsightsRecorder[KeyVa
     ) -> None:
         elements = []
         aliases: dict[EntityId, str] = {}
+        conf = insight.confidence if insight.confidence is not None else NULL_CONFIDENCE
 
         for item in KeyValuePairsListWithAliasesResponse.parse_llm_response(insight):
-            key_data = self.field_data_factory.create_string(
-                value=item["key"],
-                coordinates=None,
-                confidence=insight.confidence if insight.confidence is not None else NULL_CONFIDENCE,
+            kvp = self.field_data_factory.create_key_value_pair(
+                key=self.field_data_factory.create_string(value=item["key"], coordinates=None, confidence=conf),
+                value=self.field_data_factory.create_string(value=item["value"], coordinates=None, confidence=conf),
             )
-            value_data = self.field_data_factory.create_string(
-                value=item["value"],
-                coordinates=None,
-                confidence=insight.confidence if insight.confidence is not None else NULL_CONFIDENCE,
-            )
-
-            kvp = self.field_data_factory.create_key_value_pair(key=key_data, value=value_data)
             elements.append(kvp)
             alias = item["alias"]
             if alias and alias.strip():

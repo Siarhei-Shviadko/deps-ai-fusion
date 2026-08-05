@@ -17,12 +17,9 @@ class StringListInsightsRecorder(AbstractInsightsRecorder[StringsListResponse]):
         for_query: Query,
         insight: LLMResponse[StringsListResponse],
     ) -> None:
+        conf = insight.confidence if insight.confidence is not None else NULL_CONFIDENCE
         elements = [
-            self.field_data_factory.create_string(
-                value=element,
-                confidence=insight.confidence if insight.confidence is not None else NULL_CONFIDENCE,
-                coordinates=None,
-            )
+            self.field_data_factory.create_string(value=element, confidence=conf, coordinates=None)
             for element in StringsListResponse.parse_llm_response(insight)
         ]
 

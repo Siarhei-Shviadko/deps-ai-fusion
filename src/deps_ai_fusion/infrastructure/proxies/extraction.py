@@ -13,6 +13,7 @@ __all__ = ["ExtractionProxy"]
 FieldCode: TypeAlias = str
 ExtractedValue: TypeAlias = str | list[str]
 EdataFieldsInfo: TypeAlias = dict[FieldCode, ExtractedValue]
+ExtractionFieldInfo: TypeAlias = dict[str, Any]
 
 
 class ExtractionProxy(GenericProxy):
@@ -79,7 +80,6 @@ class ExtractionProxy(GenericProxy):
         type_: Literal["string", "checkmark", "dict", "list"],
         description: dict[str, Any] | None,
     ) -> FieldCode:
-        """This method should be used only by GenAI Fields Agent"""
 
         self._logger.info(f"Creating extraction field '{name}' for document type '{document_type_id}'")
 
@@ -99,6 +99,20 @@ class ExtractionProxy(GenericProxy):
         self._check_response(response)
 
         return response.json()["pk"]
+
+    def list_extraction_fields(
+        self,
+        document_type_id: str,
+        extractor_id: str | None = None,
+    ) -> list[ExtractionFieldInfo]:
+
+        url = f"{self._base_url}{self.v2_url}/document-types/{document_type_id}/extraction-fields"
+        params = {"extractorId": extractor_id} if extractor_id else {}
+        response = self._session.get(url, params=params, timeout=self._timeout)
+
+        self._check_response(response)
+
+        return response.json()
 
     def get_extracted_data(self, document_id) -> SerializedExtractedData:
         url = f"{self._base_url}{self.v2_url}/extracted-data/{document_id}"

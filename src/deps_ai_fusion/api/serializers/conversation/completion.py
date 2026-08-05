@@ -5,7 +5,7 @@ from pydantic import Field
 from deps_ai_fusion.domain.model.conversation import Completion
 
 from ..base import ConfiguredBaseModel
-from ..llm_extractor import SerializedPageSpan
+from ..page_span import SerializedPageSpan
 
 __all__ = ["SerializedCompletion", "CreateCompletionRequest"]
 

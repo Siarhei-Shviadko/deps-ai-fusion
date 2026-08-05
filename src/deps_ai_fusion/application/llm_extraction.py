@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from deps_gen_ai.exceptions import ModelNotFound
 from deps_gen_ai.providers import ProviderCode
@@ -139,6 +140,7 @@ class LLMExtractionService:
                 top_p=extraction_params["top_p"],
                 page_span=extraction_params["page_span"],
                 context_attachments=extraction_params["context_attachments"],
+                extra_llm_params=extraction_params["extra_llm_params"],
                 extractor_id=extractor["extractor_id"],
             )
 
@@ -164,9 +166,10 @@ class LLMExtractionService:
         custom_instruction: str,
         grouping_factor: int,
         temperature: float,
-        top_p: float,
+        top_p: float | None,
         page_span: RawPageSpan | None = None,
         context_attachments: ContextAttachments | None = None,
+        extra_llm_params: dict[str, Any] | None = None,
     ) -> None:
         llm_extractor = self._find_llm_extractor_for_document_type(
             extractor_id=extractor_id,
@@ -183,6 +186,7 @@ class LLMExtractionService:
                 top_p=top_p,
                 page_span=page_span,
                 context_attachments=context_attachments,
+                extra_llm_params=extra_llm_params,
             ),
         )
         self._llm_extractor_repository.save(llm_extractor)

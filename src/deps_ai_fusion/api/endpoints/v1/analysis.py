@@ -35,11 +35,10 @@ def retrieve_insights(
             llm_reference=request.llm_reference,
             requested_insights=request.requested_insights_as_queries(),
             custom_instructions=request.custom_instructions,
-            temperature=request.params.temperature,
-            top_p=request.params.top_p,
             retrival_group_size=request.params.grouping_factor,
             page_span=request.params.page_span.to_dict() if request.params.page_span else None,  # type: ignore
             files=request.files,
+            raw_llm_params=request.params.to_raw_llm_params(),
         ),
     )
 
@@ -61,11 +60,10 @@ def retrieve_file_insights(
             llm_reference=request.llm_reference,
             requested_insights=request.requested_insights_as_queries(),
             custom_instructions=request.custom_instructions,
-            temperature=request.params.temperature,
-            top_p=request.params.top_p,
             retrival_group_size=request.params.grouping_factor,
             page_span=request.params.page_span.to_dict() if request.params.page_span else None,  # type: ignore
             files=request.files,
+            raw_llm_params=request.params.to_raw_llm_params(),
         ),
     )
 

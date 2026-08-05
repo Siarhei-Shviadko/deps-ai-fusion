@@ -22,3 +22,6 @@ sandbox.py
 src/junit-report.xml
 .venv
 src/pyrightconfig.json
+.claude
+.cursor
+.codemie

@@ -8,11 +8,12 @@ from deps_gen_ai.common import RetrievedInsights
 from deps_gen_ai.providers import ProviderCode
 from deps_gen_ai.providers_aggregate import ProvidersAggregate
 
-from deps_ai_fusion.application import IControlLLMs
+from deps_ai_fusion.application.i_control_llms import IControlLLMs
 from deps_ai_fusion.application.types import ModelName, ProviderName
 from deps_ai_fusion.domain.model import Code as QueryCode
 from deps_ai_fusion.domain.model import (
     ContextAttachments,
+    IModelCapabilitiesService,
     LLMExtractor,
     PageSpan,
     Query,
@@ -34,15 +35,16 @@ class LLMsController(IControlLLMs):
         extraction: ExtractionProxy,
         unifier: UnifierProxy,
         coordinates_processor: CoordinatesProcessor,
+        capabilities_service: IModelCapabilitiesService,
         llm_coordinates_enabled: bool = False,
     ) -> None:
         self._providers = providers
         self._extraction = extraction
         self._unifier = unifier
         self._coordinates_processor = coordinates_processor
+        self._capabilities_service = capabilities_service
         self._genai_query_factory = GenAIQueryFactory()
         self._insights_recorder = InsightsRecorder()
-
         self._llm_coordinates_enabled = llm_coordinates_enabled
 
         self._logger = logging.getLogger(self.__class__.__name__)
@@ -67,16 +69,15 @@ class LLMsController(IControlLLMs):
             model,
         )
 
+        filtered = self._capabilities_service.filter_to_supported_parameters(
+            provider, model, llm_extractor.extraction_params.llm_params
+        )
+
         retrieved_insights = self._providers.retrieve_insights(
             provider=provider,
             model=model,
             entity_id=document_id,
             elements=self._genai_queries_from_domain(llm_extractor.query_values()),
-            temperature=llm_extractor.extraction_params.temperature,
-            top_p=llm_extractor.extraction_params.top_p,
-            max_tokens=llm_extractor.extraction_params.max_tokens,
-            stop=llm_extractor.extraction_params.stop,
-            seed=llm_extractor.extraction_params.seed,
             custom_instructions=llm_extractor.extraction_params.custom_instruction,
             retrival_group_size=llm_extractor.extraction_params.grouping_factor,
             page_span=GenAIPageSpan(
@@ -92,6 +93,7 @@ class LLMsController(IControlLLMs):
             )
             if llm_extractor.extraction_params.context_attachments is not None
             else None,
+            raw_llm_params=filtered,
         )
 
         edata = self._transform_into_extracted_data(

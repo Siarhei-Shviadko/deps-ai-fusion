@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import uuid4
 
 from deps_gen_ai.providers import ProviderCode
@@ -19,9 +20,10 @@ class CreateLLMExtractorSagaData(SagaData):
         custom_instruction: str,
         grouping_factor: int,
         temperature: float,
-        top_p: float,
+        top_p: float | None,
         page_span: RawPageSpan | None,
         context_attachments: ContextAttachments | None,
+        extra_llm_params: dict[str, Any] | None = None,
         extractor_id: str | None = None,
     ) -> None:
         super().__init__(entity_id=uuid4().hex)
@@ -37,6 +39,7 @@ class CreateLLMExtractorSagaData(SagaData):
         self.top_p = top_p
         self.page_span = page_span
         self.context_attachments = context_attachments
+        self.extra_llm_params = extra_llm_params or {}
 
         self.document_type_id: str | None = None
         self.extractor_id: str | None = extractor_id

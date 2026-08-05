@@ -10,7 +10,6 @@ from deps_ai_fusion.domain.model.llm_extractor import (
     LLMExtractor,
     LLMExtractorFactory,
     RawDataShape,
-    RawLLMExtractionParams,
     RawLLMWorkflow,
     RawPageSpan,
 )
@@ -34,9 +33,9 @@ def test_llm_extractor__factory_create() -> None:
     assert llm_extractor.llm_reference.model == model
 
 
-def test_llm_extractor__update(llm_extractor: LLMExtractor) -> None:
+def test_llm_extractor__update(llm_extractor: LLMExtractor, raw_extraction_params_factory) -> None:
     name = "HelloLLM"
-    extraction_params = RawLLMExtractionParams(
+    extraction_params = raw_extraction_params_factory(
         custom_instruction=uuid.uuid4().hex,
         grouping_factor=random.randint(1, 100),
         temperature=random.random(),
@@ -59,8 +58,8 @@ def test_llm_extractor__update(llm_extractor: LLMExtractor) -> None:
     assert llm_extractor.extraction_params.page_span.end == extraction_params["page_span"]["end"]
 
 
-def test_llm_extractor__update_page_span_from_value_to_none(llm_extractor):
-    extraction_params = RawLLMExtractionParams(
+def test_llm_extractor__update_page_span_from_value_to_none(llm_extractor, raw_extraction_params_factory):
+    extraction_params = raw_extraction_params_factory(
         custom_instruction=llm_extractor.extraction_params.custom_instruction,
         grouping_factor=llm_extractor.extraction_params.grouping_factor,
         temperature=llm_extractor.extraction_params.temperature,
@@ -74,8 +73,8 @@ def test_llm_extractor__update_page_span_from_value_to_none(llm_extractor):
     assert llm_extractor.extraction_params.page_span == extraction_params["page_span"]
 
 
-def test_llm_extractor__update_page_span_from_none_to_value(llm_extractor__no_page_span):
-    extraction_params = RawLLMExtractionParams(
+def test_llm_extractor__update_page_span_from_none_to_value(llm_extractor__no_page_span, raw_extraction_params_factory):
+    extraction_params = raw_extraction_params_factory(
         custom_instruction=llm_extractor__no_page_span.extraction_params.custom_instruction,
         grouping_factor=llm_extractor__no_page_span.extraction_params.grouping_factor,
         temperature=llm_extractor__no_page_span.extraction_params.temperature,
@@ -90,8 +89,8 @@ def test_llm_extractor__update_page_span_from_none_to_value(llm_extractor__no_pa
     assert llm_extractor__no_page_span.extraction_params.page_span.end == extraction_params["page_span"]["end"]
 
 
-def test_llm_extractor__update_context_attachments_from_value_to_none(llm_extractor):
-    extraction_params = RawLLMExtractionParams(
+def test_llm_extractor__update_context_attachments_from_value_to_none(llm_extractor, raw_extraction_params_factory):
+    extraction_params = raw_extraction_params_factory(
         custom_instruction=llm_extractor.extraction_params.custom_instruction,
         grouping_factor=llm_extractor.extraction_params.grouping_factor,
         temperature=llm_extractor.extraction_params.temperature,
@@ -105,8 +104,10 @@ def test_llm_extractor__update_context_attachments_from_value_to_none(llm_extrac
     assert llm_extractor.extraction_params.context_attachments == extraction_params["context_attachments"]
 
 
-def test_llm_extractor__update_context_attachments_from_none_to_value(llm_extractor_no_context_attachments):
-    extraction_params = RawLLMExtractionParams(
+def test_llm_extractor__update_context_attachments_from_none_to_value(
+    llm_extractor_no_context_attachments, raw_extraction_params_factory
+):
+    extraction_params = raw_extraction_params_factory(
         custom_instruction=llm_extractor_no_context_attachments.extraction_params.custom_instruction,
         grouping_factor=llm_extractor_no_context_attachments.extraction_params.grouping_factor,
         temperature=llm_extractor_no_context_attachments.extraction_params.temperature,

@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     instrumentation_enabled: bool = False
     llm_coordinates_enabled: bool = False
 
+    model_capability_overrides: dict[str, dict[str, str]] = Field(
+        default_factory=dict,
+        validation_alias="MODEL_CAPABILITY_OVERRIDES",
+    )
+
     extraction_settings: ExtractionSettings = ExtractionSettings()
     storage_settings: FileStorageSettings = FileStorageSettings()
     parsing_settings: ParsingServiceSettings = ParsingServiceSettings()

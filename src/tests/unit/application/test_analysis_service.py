@@ -20,9 +20,11 @@ def test_insights_retrival__success(
         llm_reference=raw_insights_retrival_request_data["llm_reference"],
         document_id=raw_insights_retrival_request_data["entity_id"],
         requested_insights=raw_insights_retrival_request_data["elements"],
+        raw_llm_params={
+            "temperature": raw_insights_retrival_request_data["temperature"],
+            "top_p": raw_insights_retrival_request_data["top_p"],
+        },
         custom_instructions=raw_insights_retrival_request_data["custom_instructions"],
-        temperature=raw_insights_retrival_request_data["temperature"],
-        top_p=raw_insights_retrival_request_data["top_p"],
         retrival_group_size=raw_insights_retrival_request_data["retrival_group_size"],
         files=raw_insights_retrival_request_data["files"],
     )
@@ -35,9 +37,11 @@ def test_insights_retrival__success(
         llm_reference=raw_insights_retrival_request_data["llm_reference"],
         filepath=raw_insights_retrival_request_data["filepath"],
         requested_insights=raw_insights_retrival_request_data["elements"],
+        raw_llm_params={
+            "temperature": raw_insights_retrival_request_data["temperature"],
+            "top_p": raw_insights_retrival_request_data["top_p"],
+        },
         custom_instructions=raw_insights_retrival_request_data["custom_instructions"],
-        temperature=raw_insights_retrival_request_data["temperature"],
-        top_p=raw_insights_retrival_request_data["top_p"],
         retrival_group_size=raw_insights_retrival_request_data["retrival_group_size"],
         files=raw_insights_retrival_request_data["files"],
     )
@@ -50,7 +54,7 @@ def test_insights_retrival__success(
 @pytest.mark.parametrize(
     "llm_reference,expected_provider,expected_model",
     [
-        ("provider@model", "provider", "model"),
+        ("dial@model", "dial", "model"),
         ("model", AnalysisService._DEFAULT_PROVIDER, "model"),
     ],
 )
@@ -69,9 +73,11 @@ def test_insights_retrival__llm_reference_default_provider(
         llm_reference=llm_reference,
         document_id=raw_insights_retrival_request_data["entity_id"],
         requested_insights=raw_insights_retrival_request_data["elements"],
+        raw_llm_params={
+            "temperature": raw_insights_retrival_request_data["temperature"],
+            "top_p": raw_insights_retrival_request_data["top_p"],
+        },
         custom_instructions=raw_insights_retrival_request_data["custom_instructions"],
-        temperature=raw_insights_retrival_request_data["temperature"],
-        top_p=raw_insights_retrival_request_data["top_p"],
         retrival_group_size=raw_insights_retrival_request_data["retrival_group_size"],
         files=raw_insights_retrival_request_data["files"],
     )
@@ -85,9 +91,11 @@ def test_insights_retrival__llm_reference_default_provider(
         llm_reference=llm_reference,
         filepath=raw_insights_retrival_request_data["filepath"],
         requested_insights=raw_insights_retrival_request_data["elements"],
+        raw_llm_params={
+            "temperature": raw_insights_retrival_request_data["temperature"],
+            "top_p": raw_insights_retrival_request_data["top_p"],
+        },
         custom_instructions=raw_insights_retrival_request_data["custom_instructions"],
-        temperature=raw_insights_retrival_request_data["temperature"],
-        top_p=raw_insights_retrival_request_data["top_p"],
         retrival_group_size=raw_insights_retrival_request_data["retrival_group_size"],
         files=raw_insights_retrival_request_data["files"],
     )

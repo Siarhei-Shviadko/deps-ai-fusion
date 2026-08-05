@@ -1,4 +1,5 @@
 import re
+from typing import Any
 
 from deps_gen_ai.common import (
     LLM,
@@ -12,12 +13,25 @@ from deps_gen_ai.common import (
 from deps_gen_ai.exceptions import ProviderNotFound
 from deps_gen_ai.providers_aggregate import ProvidersAggregate
 
+from deps_ai_fusion.domain.model import ParameterSupport
+
 __all__ = ["FakeProvidersAggregate"]
+
+_FAKE_DIAL_PARAMETER_SUPPORT: dict[str, ParameterSupport] = {
+    "temperature": ParameterSupport.SUPPORTED,
+    "top_p": ParameterSupport.SUPPORTED,
+    "max_tokens": ParameterSupport.SUPPORTED,
+    "stop": ParameterSupport.SUPPORTED,
+    "seed": ParameterSupport.SUPPORTED,
+    "logprobs": ParameterSupport.SUPPORTED,
+}
 
 
 class FakeProvidersAggregate(ProvidersAggregate):
     def __init__(self) -> None:
         self._response: LLMResponse | None = None
+        self._responses: dict[str, LLMResponse] | None = None
+        self._entity_responses: dict[str, LLMResponse] = {}
         self.providers = [Provider(code="dial", name="Epam DIAL")]
         self.models = {
             "dial": [
@@ -45,9 +59,16 @@ class FakeProvidersAggregate(ProvidersAggregate):
             ],
         }
         self._insights_retrival_request_made_with: tuple[str, str] | None = None
+        self._last_insights_kwargs: dict[str, Any] | None = None
 
     def set_response(self, response: str, confidence: float | None = None) -> None:
         self._response = LLMResponse(content=response, confidence=confidence)
+
+    def set_responses(self, responses: dict[str, str], confidence: float | None = None) -> None:
+        self._responses = {code: LLMResponse(content=val, confidence=confidence) for code, val in responses.items()}
+
+    def set_entity_response(self, entity_id: str, content: str, confidence: float | None = None) -> None:
+        self._entity_responses[entity_id] = LLMResponse(content=content, confidence=confidence)
 
     def chat_request(self, *args, **kwargs) -> LLMResponse:
         if self._response is None:
@@ -60,18 +81,20 @@ class FakeProvidersAggregate(ProvidersAggregate):
         model: str,
         entity_id: str,
         elements: dict[str, Query],
-        temperature: float | None = None,
-        top_p: float | None = None,
-        max_tokens: int | None = None,
-        stop: list[str] | None = None,
-        seed: int | None = None,
+        raw_llm_params: dict[str, Any],
         custom_instructions: str | None = None,
         retrival_group_size: int | None = None,
         page_span: PageSpan | None = None,
         files: list[str] | None = None,
     ) -> RetrievedInsights:
         self._insights_retrival_request_made_with = (provider, model)
+        self._last_insights_kwargs = raw_llm_params
 
+        if entity_id in self._entity_responses:
+            response = self._entity_responses[entity_id]
+            return RetrievedInsights(insights={code: response for code in elements.keys()})
+        if self._responses is not None:
+            return RetrievedInsights(insights={code: self._responses[code] for code in elements.keys()})
         if self._response is None:
             raise RuntimeError("No response set for FakeProvidersAggregate")
         return RetrievedInsights(insights={element_code: self._response for element_code in elements.keys()})
@@ -83,17 +106,14 @@ class FakeProvidersAggregate(ProvidersAggregate):
         filepath: str,
         file_blob: bytes,
         elements: dict[str, Query],
-        temperature: float | None = None,
-        top_p: float | None = None,
-        max_tokens: int | None = None,
-        stop: list[str] | None = None,
-        seed: int | None = None,
+        raw_llm_params: dict[str, Any],
         custom_instructions: str | None = None,
         retrival_group_size: int | None = None,
         page_span: PageSpan | None = None,
         files: list[str] | None = None,
     ) -> RetrievedInsights:
         self._insights_retrival_request_made_with = (provider, model)
+        self._last_insights_kwargs = raw_llm_params
 
         if self._response is None:
             raise RuntimeError("No response set for FakeProvidersAggregate")
@@ -111,3 +131,12 @@ class FakeProvidersAggregate(ProvidersAggregate):
     def assert_insights_retrival_request_made_with(self, provider: str, model: str) -> None:
         assert self._insights_retrival_request_made_with == (provider, model)
         self._insights_retrival_request_made_with = None
+
+    def assert_last_insights_kwargs(
+        self,
+        **expected: Any,
+    ) -> None:
+        assert self._last_insights_kwargs is not None
+        for key, value in expected.items():
+            assert self._last_insights_kwargs[key] == value
+        self._last_insights_kwargs = None

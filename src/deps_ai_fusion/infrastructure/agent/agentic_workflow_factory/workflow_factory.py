@@ -1,11 +1,15 @@
+import json
+import re
 from typing import Any, Literal
 
 from langchain_core.messages import SystemMessage
 from langgraph.graph.state import END, CompiledStateGraph, StateGraph
 from langgraph.prebuilt import create_react_agent
+from pydantic import ValidationError
 
 from deps_ai_fusion.application import IInsightsStore
 from deps_ai_fusion.infrastructure.agent.persistance.models import InsightsPayload
+from deps_ai_fusion.infrastructure.agent.text_sanitizer import sanitize_text
 
 from ..settings import AgentSettings
 from ..state import AgentState
@@ -13,6 +17,7 @@ from ..tools import (
     DocumentLoadingTool,
     DocumentTypeCreationTool,
     GenAIFieldCreationTool,
+    ListDocumentTypeFieldsTool,
     PerformLLMExtractionTool,
 )
 from .provider_factory import ModelProviderFactory
@@ -24,12 +29,13 @@ from .system_message import (
 __all__ = ["AgenticWorkflowFactory"]
 
 
-class AgenticWorkflowFactory:
+class AgenticWorkflowFactory:  # noqa: WPS214
     def __init__(
         self,
         document_loader: DocumentLoadingTool,
         document_type_creation: DocumentTypeCreationTool,
         genai_field_creation: GenAIFieldCreationTool,
+        list_document_type_fields: ListDocumentTypeFieldsTool,
         perform_llm_extraction: PerformLLMExtractionTool,
         insights_store: IInsightsStore,
     ) -> None:
@@ -38,6 +44,7 @@ class AgenticWorkflowFactory:
         self._document_loader = document_loader
         self._document_type_creation = document_type_creation
         self._genai_field_creation = genai_field_creation
+        self._list_document_type_fields = list_document_type_fields
         self._perform_llm_extraction = perform_llm_extraction
         self._insights_store = insights_store
 
@@ -58,7 +65,6 @@ class AgenticWorkflowFactory:
         graph_builder.set_entry_point("load_insights")
         graph_builder.add_edge("load_insights", "assemble_context")
 
-        # First agent is chosen based on existence of document_type_id
         graph_builder.add_conditional_edges("assemble_context", self._route_to_first_agent)
         graph_builder.add_conditional_edges("bootstrap_agent", self._after_bootstrap_agent)
 
@@ -99,6 +105,13 @@ class AgenticWorkflowFactory:
 
         tools.append(
             create_tool_info(
+                tool_name=self._list_document_type_fields.name,
+                parameters=[{"name": "document_type_id"}],
+            )
+        )
+
+        tools.append(
+            create_tool_info(
                 tool_name=self._genai_field_creation.name,
                 parameters=[{"name": "document_id"}, {"name": "document_type_id"}],
             )
@@ -110,7 +123,12 @@ class AgenticWorkflowFactory:
         return create_react_agent(
             model=self.llm,
             prompt=SYSTEM_MESSAGE_EXISTING_DOCUMENT_TYPE,
-            tools=[self._document_loader, self._genai_field_creation, self._perform_llm_extraction],
+            tools=[
+                self._document_loader,
+                self._list_document_type_fields,
+                self._genai_field_creation,
+                self._perform_llm_extraction,
+            ],
             state_schema=AgentState,
         )
 
@@ -132,6 +150,27 @@ class AgenticWorkflowFactory:
     @staticmethod
     def _route_to_first_agent(state: AgentState) -> Literal["main_agent", "bootstrap_agent"]:
         return "main_agent" if state.document_type_id is not None else "bootstrap_agent"
+
+    @staticmethod
+    def _insights_payload_from_assistant_content(  # noqa: WPS231
+        content: Any,
+    ) -> InsightsPayload:
+        if isinstance(content, list):
+            segments: list[str] = []
+            for part in content:
+                if isinstance(part, str):
+                    segments.append(part)
+                elif isinstance(part, dict) and part.get("type") == "text":
+                    text = part.get("text")
+                    if isinstance(text, str):
+                        segments.append(text)  # noqa: WPS220
+            raw = "\n".join(segments).strip()
+        else:
+            raw = str(content).strip()
+        fence = re.match(r"^```(?:json)?\s*\n?(.*?)\n?```\s*$", raw, re.DOTALL | re.IGNORECASE)
+        if fence:
+            raw = fence.group(1).strip()
+        return InsightsPayload.model_validate(json.loads(raw))
 
     def _load_insights(self, state: AgentState) -> AgentState:
         if (loaded := self._insights_store.load(state.conversation_id, state.tenant_id)) is None:
@@ -173,9 +212,13 @@ class AgenticWorkflowFactory:
 
         messages = [summarizer_system] + list(state.messages)
 
-        structured = self.llm.with_structured_output(InsightsPayload).invoke(messages)
+        reply = self.llm.invoke(messages)
+        try:
+            structured = AgenticWorkflowFactory._insights_payload_from_assistant_content(reply.content)
+        except (json.JSONDecodeError, ValidationError, TypeError, KeyError):  # noqa: WPS239
+            return state
 
-        extracted = [insight.strip() for insight in structured.insights]  # type: ignore
+        extracted = [sanitize_text(insight.strip()) for insight in structured.insights]
 
         if not extracted and not state.insights:
             return state

@@ -20,7 +20,7 @@ class DocumentTypeCreationTool(BaseTool):
     description: str = (
         "Create a new Document Type for this document. "
         "Only use when no document_type_id exists and after explicit user confirmation. "
-        "Reasoning must include the user-confirmed name and why creation is needed now."
+        "Do not use if a Document Type already exists in the current conversation state."
     )
     args_schema: ArgsSchema | None = DocumentTypeCreationRequest
 
@@ -52,6 +52,7 @@ class DocumentTypeCreationTool(BaseTool):
                     top_p=settings.default_extractor_top_p,
                     page_span=None,
                     context_attachments=None,
+                    extra_llm_params=settings.default_extractor_extra_llm_params,
                 ),
                 extractor_id=None,
             ),

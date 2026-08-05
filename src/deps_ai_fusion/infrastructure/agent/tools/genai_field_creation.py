@@ -25,9 +25,9 @@ class GenAIFieldCreationTool(BaseTool):
     name: str = "create-genai-field"
     description: str = (
         "Create a new GenAI Field on the existing Document Type and register its prompts_chain. "
-        "Use only after user explicitly approves the field name, prompts and response_model, and ideally after validation via perform-llm-extraction. "
-        "Prefer the smallest viable prompts_chain (often one prompt); add steps only when strictly necessary. "
-        "Reasoning should summarize the user approval and why creation is safe now."
+        "Use only after user explicitly approves the field name, prompts, and response_model, "
+        "and ideally after validation via perform-llm-extraction. "
+        "Do not use unless you have first called list-document-type-fields and confirmed no field with the same name or purpose exists."
     )
     args_schema: ArgsSchema | None = CreateGenAIFieldRequest
 

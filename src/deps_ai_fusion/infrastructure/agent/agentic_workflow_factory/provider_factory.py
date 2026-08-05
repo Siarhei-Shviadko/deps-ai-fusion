@@ -1,6 +1,6 @@
 from typing import Callable
 
-from deps_gen_ai.settings import ProviderCode
+from deps_gen_ai.providers import ProviderCode
 from langchain_aws import ChatBedrockConverse
 from langchain_core.language_models import BaseChatModel
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -28,7 +28,23 @@ class ModelProviderFactory:
         return cls(settings)
 
     def create_llm(self) -> BaseChatModel:
+        if self._settings.litellm_enabled:
+            return self._litellm_llm()
+
         return self._mapping[self._settings.provider_id]()
+
+    def _litellm_llm(self) -> BaseChatModel:
+        default_headers = {}
+        if self._settings.litellm_api_version:
+            default_headers["api-version"] = self._settings.litellm_api_version
+
+        return ChatOpenAI(
+            model=self._settings.model_id,
+            base_url=self._settings.litellm_base_url,
+            api_key=self._settings.litellm_api_key,
+            default_headers=default_headers or None,
+            max_retries=3,
+        )
 
     def _dial_llm(self) -> AzureChatOpenAI:
         return AzureChatOpenAI(

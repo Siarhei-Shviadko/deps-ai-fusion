@@ -81,6 +81,7 @@ class CreateLLMExtractorSteps:
                     top_p=data.top_p,
                     page_span=data.page_span,
                     context_attachments=data.context_attachments,
+                    extra_llm_params=data.extra_llm_params,
                 ),
             )
             self._extractor_repository.save(extractor)

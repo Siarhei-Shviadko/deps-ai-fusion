@@ -78,11 +78,12 @@ def test_save_updated__updated(
 
     extraction_params = RawLLMExtractionParams(
         custom_instruction=uuid.uuid4().hex,
-        grouping_factor=None,
-        temperature=None,
-        top_p=None,
+        grouping_factor=3,
+        temperature=0.0,
+        top_p=1.0,
         page_span=None,
         context_attachments=None,
+        extra_llm_params=None,
     )
 
     llm_extractor.update(

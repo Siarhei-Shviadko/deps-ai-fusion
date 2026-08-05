@@ -28,7 +28,11 @@ from deps_ai_fusion.application import (
     LLMExtractionService,
 )
 from deps_ai_fusion.constants import PROJECT_NAME
-from deps_ai_fusion.domain.model import IConversationRepository, ILLMExtractorRepository
+from deps_ai_fusion.domain.model import (
+    IConversationRepository,
+    ILLMExtractorRepository,
+    IModelCapabilitiesService,
+)
 from deps_ai_fusion.extras import Database, DBDialect, DBDriver
 from deps_ai_fusion.infrastructure.access_management import user
 from deps_ai_fusion.infrastructure.agent import (
@@ -38,6 +42,7 @@ from deps_ai_fusion.infrastructure.agent import (
     DocumentTypeCreationTool,
     GenAIFieldCreationTool,
     GenAIQueriesAgent,
+    ListDocumentTypeFieldsTool,
     PerformLLMExtractionTool,
 )
 from deps_ai_fusion.infrastructure.proxies import (
@@ -58,6 +63,8 @@ from deps_ai_fusion.infrastructure.services import (
     CoordinatesProcessor,
     CoordinatesService,
     LLMsController,
+    ModelCapabilitiesService,
+    StaticModelCapabilitiesRegistry,
 )
 from deps_ai_fusion.messaging.dispatcher import make_message_dispatcher
 from deps_ai_fusion.messaging.sagas import (
@@ -330,6 +337,12 @@ class Services(containers.DeclarativeContainer):
     config = providers.Configuration()
     providers_aggregate = providers.Dependency(instance_of=object)
     proxies = providers.DependenciesContainer()
+    model_capabilities_registry = providers.Dependency(instance_of=object)
+
+    model_capabilities_service: providers.Singleton[IModelCapabilitiesService] = providers.Singleton(
+        ModelCapabilitiesService,
+        registry=model_capabilities_registry,
+    )
 
     coordinates_processor: providers.Singleton[CoordinatesProcessor] = providers.Singleton(
         CoordinatesProcessor,
@@ -342,6 +355,7 @@ class Services(containers.DeclarativeContainer):
         extraction=proxies.extraction,
         unifier=proxies.unifier,
         coordinates_processor=coordinates_processor,
+        capabilities_service=model_capabilities_service,
         llm_coordinates_enabled=config.llm_coordinates_enabled,
     )
     layout_context_creator: providers.Singleton[ICreateContext[str]] = providers.Singleton(
@@ -360,6 +374,7 @@ class Agent(containers.DeclarativeContainer):
     repositories = providers.DependenciesContainer()
     llm_extraction_service = providers.Dependency(instance_of=object)
     providers_aggregate = providers.Dependency(instance_of=object)
+    model_capabilities_service = providers.Dependency(instance_of=object)
 
     document_loading_tool: providers.Singleton[DocumentLoadingTool] = providers.Singleton(
         DocumentLoadingTool,
@@ -377,10 +392,16 @@ class Agent(containers.DeclarativeContainer):
         extraction_proxy=proxies.extraction,
     )
 
+    list_document_type_fields: providers.Singleton[ListDocumentTypeFieldsTool] = providers.Singleton(
+        ListDocumentTypeFieldsTool,
+        extraction_proxy=proxies.extraction,
+    )
+
     perform_llm_extraction: providers.Singleton[PerformLLMExtractionTool] = providers.Singleton(
         PerformLLMExtractionTool,
         llm_providers=providers_aggregate,
         extractors_app=llm_extraction_service,
+        capabilities_service=model_capabilities_service,
     )
 
     agentic_workflow_factory: providers.Singleton[AgenticWorkflowFactory] = providers.Singleton(
@@ -388,6 +409,7 @@ class Agent(containers.DeclarativeContainer):
         document_loader=document_loading_tool,
         document_type_creation=document_type_creation,
         genai_field_creation=genai_field_creation,
+        list_document_type_fields=list_document_type_fields,
         perform_llm_extraction=perform_llm_extraction,
         insights_store=repositories.insights_repository,
     )
@@ -463,11 +485,17 @@ class Containers(containers.DeclarativeContainer):
         proxies=proxies,
     )
 
+    model_capabilities_registry: providers.Singleton[StaticModelCapabilitiesRegistry] = providers.Singleton(
+        StaticModelCapabilitiesRegistry,
+        env_overrides=config.model_capability_overrides,
+    )
+
     services: providers.Container[Services] = providers.Container(
         Services,
         config=config,
         providers_aggregate=providers_aggregate,
         proxies=proxies,
+        model_capabilities_registry=model_capabilities_registry,
     )
 
     llm_extraction_service: providers.Factory[LLMExtractionService] = providers.Factory(
@@ -487,6 +515,7 @@ class Containers(containers.DeclarativeContainer):
         llm_extraction_service=llm_extraction_service,
         providers_aggregate=providers_aggregate,
         repositories=repositories,
+        model_capabilities_service=services.model_capabilities_service,
     )
 
     conversation_service: providers.Factory[ConversationService] = providers.Factory(
@@ -500,6 +529,7 @@ class Containers(containers.DeclarativeContainer):
         AnalysisService,
         providers=providers_aggregate,
         storage=proxies.file_storage,
+        capabilities_service=services.model_capabilities_service,
     )
 
     agent_service: providers.Factory[AgentService] = providers.Factory(

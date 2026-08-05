@@ -11,6 +11,7 @@ class SerializedLLM(ConfiguredBaseModel):
     name: str
     context_type: ContextType = Field(..., alias="contextType")
     description: str
+    parameter_support: list[str] = Field(..., alias="parameterSupport")
 
     @classmethod
     def from_dto(cls, model: LLM) -> "SerializedLLM":
@@ -19,6 +20,7 @@ class SerializedLLM(ConfiguredBaseModel):
             name=model.name,
             description=model.description,
             context_type=model.context_type,
+            parameter_support=model.parameter_support,
         )
 
 
