@@ -44,6 +44,7 @@ class LLMExtractorFactory:
                 if extraction_params["page_span"]
                 else None,
                 context_attachments=extraction_params["context_attachments"],
+                extra_llm_params=extraction_params["extra_llm_params"],
             )
 
         return ExtractionParams()

@@ -1,4 +1,3 @@
-import logging
 import os
 
 import uvicorn
@@ -9,10 +8,6 @@ from deps_ai_fusion.settings import Settings
 from .initializers import base_service_init, init_containers
 
 __all__ = ["run_api", "run_message_dispatcher", "run_agent_api"]
-
-
-logging.basicConfig(level=logging.INFO)
-_logger = logging.getLogger(__name__)
 
 
 def run_api():

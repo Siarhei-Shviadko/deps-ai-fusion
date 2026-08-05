@@ -8,7 +8,7 @@ from deps_ai_fusion.domain.model import Cardinality, DataType
 
 from ..state import AgentState
 
-__all__ = ["ExecuteLLMExtractionRequest", "CreateGenAIFieldRequest", "DataShape"]
+__all__ = ["ExecuteLLMExtractionRequest", "CreateGenAIFieldRequest", "DataShape", "ListDocumentTypeFieldsRequest"]
 
 
 class DataShape(BaseModel):
@@ -58,4 +58,10 @@ class DocumentTypeCreationRequest(BaseModel):
     document_type_name: str = Field(description="Name of the document type to create.")
 
     tool_call_id: Annotated[str, InjectedToolCallId()]
+    state: Annotated[AgentState, InjectedState()]
+
+
+class ListDocumentTypeFieldsRequest(BaseModel):
+    reasoning: str = Field(description="Why you need to inspect existing fields (<=20 words).")
+
     state: Annotated[AgentState, InjectedState()]

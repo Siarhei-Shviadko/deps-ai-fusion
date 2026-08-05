@@ -1,4 +1,4 @@
-from typing import TypedDict
+from typing import Any, TypedDict
 
 from .extraction_params.context_attachments import ContextAttachments
 
@@ -14,6 +14,7 @@ class RawLLMExtractionParams(TypedDict):
     custom_instruction: str
     grouping_factor: int
     temperature: float
-    top_p: float
+    top_p: float | None
     page_span: RawPageSpan | None
     context_attachments: ContextAttachments | None
+    extra_llm_params: dict[str, Any] | None

@@ -26,3 +26,9 @@ def genai_agent(mock_workflow_factory, agent_registrator):
         workflow_factory=mock_workflow_factory,
         agent_registrator=agent_registrator,
     )
+
+
+@pytest.fixture
+def model_capabilities_service(containers):
+    service = containers.services.model_capabilities_service()
+    yield service

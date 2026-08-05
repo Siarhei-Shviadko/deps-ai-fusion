@@ -190,7 +190,7 @@ def test_perform_extraction__no_extractor__error(
 @pytest.mark.parametrize(
     "llm_type,expected_provider,expected_model",
     [
-        ("provider@model", "provider", "model"),
+        ("dial@model", "dial", "model"),
         ("model", LLMExtractionService._DEFAULT_PROVIDER, "model"),
     ],
 )

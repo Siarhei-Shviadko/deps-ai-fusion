@@ -19,11 +19,12 @@ class StringListWithAliasesInsightsRecorder(AbstractInsightsRecorder[StringsList
     ) -> None:
         elements: list[GenericData[str]] = []
         aliases: dict[EntityId, str] = {}
+        conf = insight.confidence if insight.confidence is not None else NULL_CONFIDENCE
 
         for element in StringsListWithAliasesResponse.parse_llm_response(insight):
             element_data = self.field_data_factory.create_string(
                 value=element["value"],
-                confidence=insight.confidence if insight.confidence is not None else NULL_CONFIDENCE,
+                confidence=conf,
                 coordinates=None,
             )
             elements.append(element_data)

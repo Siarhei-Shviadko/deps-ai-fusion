@@ -11,7 +11,6 @@ from deps_ai_fusion.domain.model import (
     ContextAttachments,
     ILLMExtractorRepository,
     LLMExtractor,
-    Query,
 )
 
 
@@ -187,7 +186,16 @@ def test_update_extractor__ok(
             "groupingFactor": 3,
             "temperature": 0.5,
             "topP": 0.1,
+            "maxTokens": 100,
+            "stop": ["stop_token"],
+            "seed": 123,
+            "logprobs": True,
+            "extraModelParams": {
+                "key1": "value1",
+                "key2": "value2",
+            },
             "pageSpan": {"start": 5, "end": 20},
+            "contextAttachments": "original_document",
         },
     }
 
@@ -207,6 +215,13 @@ def test_update_extractor__ok(
     assert updated_llm_extractor.extraction_params.top_p == data["extractionParams"]["topP"]  # type: ignore
     assert updated_llm_extractor.extraction_params.page_span.start == data["extractionParams"]["pageSpan"]["start"]  # type: ignore
     assert updated_llm_extractor.extraction_params.page_span.end == data["extractionParams"]["pageSpan"]["end"]  # type: ignore
+    assert updated_llm_extractor.extraction_params.extra_llm_params["max_tokens"] == data["extractionParams"]["maxTokens"]  # type: ignore
+    assert updated_llm_extractor.extraction_params.extra_llm_params["stop"] == data["extractionParams"]["stop"]  # type: ignore
+    assert updated_llm_extractor.extraction_params.extra_llm_params["seed"] == data["extractionParams"]["seed"]  # type: ignore
+    assert updated_llm_extractor.extraction_params.extra_llm_params["logprobs"] == data["extractionParams"]["logprobs"]  # type: ignore
+    assert updated_llm_extractor.extraction_params.context_attachments == data["extractionParams"]["contextAttachments"]  # type: ignore
+    for key, value in data["extractionParams"]["extraModelParams"].items():  # type: ignore
+        assert updated_llm_extractor.extraction_params.extra_llm_params[key] == value
 
 
 def test_update_extractor__with_page_span__error(
@@ -345,6 +360,8 @@ def test_get_llm_extractors__ok(
     assert extraction_params["groupingFactor"] == llm_extractor_with_query.extraction_params.grouping_factor
     assert extraction_params["temperature"] == llm_extractor_with_query.extraction_params.temperature
     assert extraction_params["topP"] == llm_extractor_with_query.extraction_params.top_p
+    for attr in ["maxTokens", "stop", "seed", "logprobs", "extraModelParams"]:
+        assert attr in extraction_params
 
     assert len(ext["queries"]) == len(llm_extractor_with_query.query_values())
 

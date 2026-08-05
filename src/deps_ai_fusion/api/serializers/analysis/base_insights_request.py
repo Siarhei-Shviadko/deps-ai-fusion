@@ -1,22 +1,19 @@
+from typing import Any
+
 from deps_gen_ai.common import Query
 from pydantic import Field, field_validator
 
 from deps_ai_fusion.application.structured_outputs import ReasoningResponse
 
 from ..base import ConfiguredBaseModel
-from ..llm_extractor import SerializedPageSpan
+from ..base_llm_params import BaseLLMParams
+from ..page_span import SerializedPageSpan
 from .genai_query import SerializedGenAIQuery
 
 __all__ = ["BaseInsightsRequest"]
 
 
-class RequestParams(ConfiguredBaseModel):
-    temperature: float = Field(
-        default=0,
-        description="""Controls the randomness of text generation.
-        Lower temperatures make the model more deterministic and repetitive, while higher temperatures make the model more creative and random.
-        """,
-    )
+class RequestParams(BaseLLMParams):
     grouping_factor: int | None = Field(
         None,
         alias="groupingFactor",
@@ -30,30 +27,6 @@ class RequestParams(ConfiguredBaseModel):
         alias="pageSpan",
         description="Inclusive range of pages to process (e.g. PageSpan(start=1, end=5)). If omitted, all pages will be processed.",
     )
-    top_p: float = Field(
-        default=1,
-        alias="topP",
-        description="""Controls diversity via nucleus sampling.
-        Only tokens with cumulative probability mass of top_p are considered. Value must be between 0 and 1.
-        Lower values make output more focused and deterministic.
-        """,
-    )
-
-    @field_validator("temperature")
-    @classmethod
-    def validate_temperature(cls, value: float) -> float:
-        if value < 0 or value > 1:
-            raise ValueError("Temperature must be between 0 and 1")
-
-        return value
-
-    @field_validator("top_p")
-    @classmethod
-    def validate_top_p(cls, value: float) -> float:
-        if value < 0 or value > 1:
-            raise ValueError("topP must be between 0 and 1")
-
-        return value
 
     @field_validator("grouping_factor")
     @classmethod
@@ -62,6 +35,24 @@ class RequestParams(ConfiguredBaseModel):
             raise ValueError("Grouping Factor must be greater than 0")
 
         return value
+
+    def to_raw_llm_params(self) -> dict[str, Any]:
+        params: dict[str, Any] = {}
+        if self.temperature is not None:
+            params["temperature"] = self.temperature
+        if self.top_p is not None:
+            params["top_p"] = self.top_p
+        if self.max_tokens is not None:
+            params["max_tokens"] = self.max_tokens
+        if self.stop is not None:
+            params["stop"] = self.stop
+        if self.seed is not None:
+            params["seed"] = self.seed
+        if self.logprobs is not None:
+            params["logprobs"] = self.logprobs
+        if self.extra_model_params is not None:
+            params["model_kwargs"] = self.extra_model_params
+        return params
 
 
 class BaseInsightsRequest(ConfiguredBaseModel):

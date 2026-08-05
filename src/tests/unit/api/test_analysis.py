@@ -13,7 +13,7 @@ from tests.fakes import FakeFileStorage, FakeProvidersAggregate
 class TestAnalysis:
     endpoint = V1_API_PREFIX + "/analysis"
 
-    def test_insights_retrival__success(
+    def test_insights_retrival__backward_compatible__success(
         self,
         fake_providers_aggregate: FakeProvidersAggregate,
         authenticated_client: TestClient,
@@ -59,6 +59,50 @@ class TestAnalysis:
             code: fake_llm_response for code in raw_retrieve_insights_request["requestedInsights"]
         }
 
+    def test_insights_retrival__with_extended_llm_params__success(
+        self,
+        fake_providers_aggregate: FakeProvidersAggregate,
+        authenticated_client: TestClient,
+        raw_retrieve_insights_request: dict[str, Any],
+    ) -> None:
+        fake_llm_response = "something"
+        fake_providers_aggregate.set_response(fake_llm_response)
+
+        payload = dict(raw_retrieve_insights_request)
+        payload["params"] = {
+            **payload["params"],
+            "maxTokens": 1000,
+            "seed": 42,
+            "frequencyPenalty": 0.5,
+            "modelKwargs": {"custom": True},
+        }
+
+        response = authenticated_client.post(
+            f"{self.endpoint}/retrieve-insights",
+            json=payload,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_insights_retrival__model_kwargs__passed_through(
+        self,
+        fake_providers_aggregate: FakeProvidersAggregate,
+        authenticated_client: TestClient,
+        raw_retrieve_insights_request: dict[str, Any],
+    ) -> None:
+        fake_providers_aggregate.set_response("x")
+        expected_kwargs = {"logprobs": True, "custom": 1}
+        payload = dict(raw_retrieve_insights_request)
+        payload["params"] = {**payload["params"], "extraModelParams": expected_kwargs}
+
+        response = authenticated_client.post(
+            f"{self.endpoint}/retrieve-insights",
+            json=payload,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        fake_providers_aggregate.assert_last_insights_kwargs(**expected_kwargs)
+
     @pytest.mark.parametrize(
         "invalid_field_name,invalid_value",
         [
@@ -69,6 +113,10 @@ class TestAnalysis:
             ("params", {"top_p": 5}),
             ("params", {"groupingFactor": 0}),
             ("params", {"groupingFactor": -1}),
+            ("params", {"maxTokens": 0}),
+            ("params", {"seed": -1}),
+            ("params", {"logprobs": "invalid"}),
+            ("params", {"extraModelParams": "invalid"}),
         ],
     )
     def test_insights_retrival__request_validation_failure(

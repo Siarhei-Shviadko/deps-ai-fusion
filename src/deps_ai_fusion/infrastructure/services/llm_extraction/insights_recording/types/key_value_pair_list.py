@@ -17,21 +17,14 @@ class KeyValuePairListInsightsRecorder(AbstractInsightsRecorder[KeyValuePairsLis
         for_query: Query,
         insight: LLMResponse[KeyValuePairsListResponse],
     ) -> None:
-        elements = []
-
-        for item in KeyValuePairsListResponse.parse_llm_response(insight):
-            key_data = self.field_data_factory.create_string(
-                value=item["key"],
-                coordinates=None,
-                confidence=insight.confidence if insight.confidence is not None else NULL_CONFIDENCE,
+        conf = insight.confidence if insight.confidence is not None else NULL_CONFIDENCE
+        elements = [
+            self.field_data_factory.create_key_value_pair(
+                key=self.field_data_factory.create_string(value=item["key"], coordinates=None, confidence=conf),
+                value=self.field_data_factory.create_string(value=item["value"], coordinates=None, confidence=conf),
             )
-            value_data = self.field_data_factory.create_string(
-                value=item["value"],
-                coordinates=None,
-                confidence=insight.confidence if insight.confidence is not None else NULL_CONFIDENCE,
-            )
-
-            elements.append(self.field_data_factory.create_key_value_pair(key=key_data, value=value_data))
+            for item in KeyValuePairsListResponse.parse_llm_response(insight)
+        ]
 
         edata.add_key_value_pair_list(
             self.extracted_field_factory.create_key_value_pair_list(

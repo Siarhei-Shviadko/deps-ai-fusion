@@ -137,6 +137,7 @@ class LLMExtractor:
             top_p=params["top_p"],
             page_span=params["page_span"],
             context_attachments=params["context_attachments"],
+            extra_llm_params=params["extra_llm_params"],
         )
 
         return self

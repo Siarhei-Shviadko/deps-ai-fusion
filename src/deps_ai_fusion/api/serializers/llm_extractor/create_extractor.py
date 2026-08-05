@@ -3,7 +3,7 @@ from typing import Any
 from deps_gen_ai.providers import ProviderCode
 from pydantic import Field
 
-from deps_ai_fusion.domain.model import RawLLMExtractionParams, RawLLMExtractor
+from deps_ai_fusion.domain.model import RawLLMExtractor
 
 from ..base import ConfiguredBaseModel
 from .llm_extraction_params import SerializedLLMExtractionParams
@@ -28,14 +28,7 @@ class CreateExtractorRequest(ConfiguredBaseModel):
                 provider=self.provider,
                 model=self.model,
                 extractor_id=self.extractor_id,
-                extraction_params=RawLLMExtractionParams(
-                    custom_instruction=self.extraction_params.custom_instruction,
-                    grouping_factor=self.extraction_params.grouping_factor,
-                    temperature=self.extraction_params.temperature,
-                    top_p=self.extraction_params.top_p,
-                    page_span=self.extraction_params.page_span.to_dict() if self.extraction_params.page_span else None,
-                    context_attachments=self.extraction_params.context_attachments,
-                ),
+                extraction_params=self.extraction_params.to_dict(),
             ),
         }
 

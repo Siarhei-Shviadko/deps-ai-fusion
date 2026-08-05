@@ -1,14 +1,10 @@
-from typing import Self
+from typing import Any, Self
 
 from deps_gen_ai.providers import ProviderCode
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings
 
-from deps_ai_fusion.domain.model import (
-    DEFAULT_CUSTOM_INSTRUCTION,
-    DEFAULT_TEMPERATURE,
-    DEFAULT_TOP_P,
-)
+from deps_ai_fusion.domain.model import DEFAULT_CUSTOM_INSTRUCTION, DEFAULT_TEMPERATURE
 
 from .description import AGENT_DESCRIPTION
 
@@ -16,6 +12,7 @@ __all__ = ["AgentSettings", "settings"]
 
 
 class AgentSettings(BaseSettings):
+    litellm_enabled: bool = Field(False, alias="LITELLM_ENABLED")
     provider_id: ProviderCode = Field(ProviderCode.EPAM_DIAL, alias="AGENT_PROVIDER_ID")
     model_id: str = Field("gpt-4o", alias="AGENT_MODEL_ID")
 
@@ -39,12 +36,17 @@ class AgentSettings(BaseSettings):
     default_extractor_model: str = Field("openai.gpt-4-omni-text", alias="DEFAULT_EXTRACTOR_MODEL")
     default_extractor_grouping_factor: int = Field(1, alias="DEFAULT_EXTRACTOR_GROUPING_FACTOR")
     default_extractor_temperature: float = Field(DEFAULT_TEMPERATURE, alias="DEFAULT_EXTRACTOR_TEMPERATURE")
-    default_extractor_top_p: float = Field(DEFAULT_TOP_P, alias="DEFAULT_EXTRACTOR_TOP_P")
+    default_extractor_top_p: float | None = Field(None, alias="DEFAULT_EXTRACTOR_TOP_P")
+    default_extractor_extra_llm_params: dict[str, Any] | None = Field(None, alias="DEFAULT_EXTRACTOR_EXTRA_LLM_PARAMS")
     default_extractor_custom_instruction: str = Field(
         DEFAULT_CUSTOM_INSTRUCTION, alias="DEFAULT_EXTRACTOR_CUSTOM_INSTRUCTION"
     )
 
     agent_description: str = Field(AGENT_DESCRIPTION, alias="AGENT_DESCRIPTION")
+
+    litellm_base_url: str = Field("http://localhost:4000", alias="LITELLM_BASE_URL")
+    litellm_api_key: str = Field("sk-1234", alias="LITELLM_API_KEY")
+    litellm_api_version: str = Field("2023-12-01-preview", alias="LITELLM_API_VERSION")
 
     @model_validator(mode="after")
     def validate_model(self) -> Self:
