@@ -47,7 +47,7 @@ def create_completion(
     completion: CreateCompletionRequest = Body(...),
     conversation_service: ConversationService = Depends(Provide[Containers.conversation_service]),
 ) -> SerializedCompletion:
-    return SerializedCompletion.from_domain(
+    return SerializedCompletion.from_completion_with_insight(
         conversation_service.chat_request(
             entity_id=entity_id,
             user_id=user_id,

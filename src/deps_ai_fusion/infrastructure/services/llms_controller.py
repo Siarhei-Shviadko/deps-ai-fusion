@@ -36,7 +36,6 @@ class LLMsController(IControlLLMs):
         unifier: UnifierProxy,
         coordinates_processor: CoordinatesProcessor,
         capabilities_service: IModelCapabilitiesService,
-        llm_coordinates_enabled: bool = False,
     ) -> None:
         self._providers = providers
         self._extraction = extraction
@@ -45,7 +44,6 @@ class LLMsController(IControlLLMs):
         self._capabilities_service = capabilities_service
         self._genai_query_factory = GenAIQueryFactory()
         self._insights_recorder = InsightsRecorder()
-        self._llm_coordinates_enabled = llm_coordinates_enabled
 
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -78,7 +76,7 @@ class LLMsController(IControlLLMs):
             model=model,
             entity_id=document_id,
             elements=self._genai_queries_from_domain(llm_extractor.query_values()),
-            custom_instructions=llm_extractor.extraction_params.custom_instruction,
+            custom_instructions=llm_extractor.extraction_params.effective_instruction,
             retrival_group_size=llm_extractor.extraction_params.grouping_factor,
             page_span=GenAIPageSpan(
                 start=llm_extractor.extraction_params.page_span.start,
@@ -102,13 +100,18 @@ class LLMsController(IControlLLMs):
             retrieved_insights=retrieved_insights,
         )
 
-        if self._llm_coordinates_enabled:
-            self._logger.info("Adding coordinates to extracted fields.")
-            edata_with_llm_coords = self._coordinates_processor.add_llm_coordinates(
-                document_id, SerializedExtractedData.from_model(edata)
+        if llm_extractor.extraction_params.coordinates_enabled:
+            edata = self._enrich_with_coordinates(
+                llm_extractor=llm_extractor,
+                document_id=document_id,
+                extracted_data=edata,
             )
-            if edata_with_llm_coords is not None:
-                edata = edata_with_llm_coords
+        else:
+            self._logger.info(
+                "Skipping coordinate enrichment for extractor <%s> document <%s>.",
+                llm_extractor.id(),
+                document_id,
+            )
 
         self._extraction.save_extracted_data(edata)
 
@@ -120,6 +123,49 @@ class LLMsController(IControlLLMs):
                 return True
 
         return False
+
+    def _enrich_with_coordinates(
+        self,
+        llm_extractor: LLMExtractor,
+        document_id: str,
+        extracted_data: ExtractedData,
+    ) -> ExtractedData:
+        self._logger.info(
+            "Attempting coordinate enrichment for extractor <%s> document <%s>.",
+            llm_extractor.id(),
+            document_id,
+        )
+        try:
+            edata_with_llm_coords = self._coordinates_processor.add_llm_coordinates(
+                document_id,
+                SerializedExtractedData.from_model(extracted_data),
+            )
+        except Exception as err:
+            self._logger.warning(
+                "Coordinate enrichment failed for extractor <%s> document <%s>: "
+                "exception_type=%s stage=coordinate_enrichment. Saving original extracted data.",
+                llm_extractor.id(),
+                document_id,
+                type(err).__name__,
+                exc_info=True,
+            )
+            return extracted_data
+
+        if edata_with_llm_coords is None:
+            self._logger.info(
+                "Coordinate enrichment returned no result for extractor <%s> document <%s>. "
+                "Saving original extracted data.",
+                llm_extractor.id(),
+                document_id,
+            )
+            return extracted_data
+
+        self._logger.info(
+            "Coordinate enrichment succeeded for extractor <%s> document <%s>.",
+            llm_extractor.id(),
+            document_id,
+        )
+        return edata_with_llm_coords
 
     def _split_llm_type(self, llm_type: str) -> tuple[ProviderName, ModelName]:
         if "@" not in llm_type:

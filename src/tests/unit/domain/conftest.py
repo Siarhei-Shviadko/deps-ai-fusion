@@ -24,6 +24,7 @@ def raw_extraction_params_factory():
         seed: int | None = None,
         logprobs: bool | None = None,
         model_kwargs: dict[str, Any] | None = None,
+        coordinates_enabled: bool = False,
     ):
         llm_params: dict[str, Any] = {}
         if max_tokens is not None:
@@ -44,6 +45,7 @@ def raw_extraction_params_factory():
             page_span=page_span,
             context_attachments=context_attachments,
             extra_llm_params=llm_params or None,
+            coordinates_enabled=coordinates_enabled,
         )
 
     return _build

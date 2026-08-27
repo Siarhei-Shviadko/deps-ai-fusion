@@ -24,6 +24,7 @@ class CreateLLMExtractorSagaData(SagaData):
         page_span: RawPageSpan | None,
         context_attachments: ContextAttachments | None,
         extra_llm_params: dict[str, Any] | None = None,
+        coordinates_enabled: bool = False,
         extractor_id: str | None = None,
     ) -> None:
         super().__init__(entity_id=uuid4().hex)
@@ -40,6 +41,7 @@ class CreateLLMExtractorSagaData(SagaData):
         self.page_span = page_span
         self.context_attachments = context_attachments
         self.extra_llm_params = extra_llm_params or {}
+        self.coordinates_enabled = coordinates_enabled
 
         self.document_type_id: str | None = None
         self.extractor_id: str | None = extractor_id

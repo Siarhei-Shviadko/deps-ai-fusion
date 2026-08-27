@@ -29,7 +29,7 @@ def retrieve_insights(
     request: PerformDocumentInsightsRetrivalRequest = Body(...),
     service: AnalysisService = Depends(Provide[Containers.analysis_service]),
 ) -> SerializedRetrievedInsights:
-    return SerializedRetrievedInsights.from_model(
+    return SerializedRetrievedInsights.from_processed_insights(
         service.retrieve_insights(
             document_id=request.document_id,
             llm_reference=request.llm_reference,
@@ -54,7 +54,7 @@ def retrieve_file_insights(
     request: FileInsightsRetrivalRequest = Body(...),
     service: AnalysisService = Depends(Provide[Containers.analysis_service]),
 ) -> SerializedRetrievedInsights:
-    return SerializedRetrievedInsights.from_model(
+    return SerializedRetrievedInsights.from_processed_insights(
         service.retrieve_file_insights(
             filepath=request.file_path,
             llm_reference=request.llm_reference,

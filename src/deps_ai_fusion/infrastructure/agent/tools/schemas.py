@@ -34,9 +34,22 @@ class CreateGenAIFieldRequest(BaseModel):
         examples=["Invoice Total", "Vendor Name", "Line Items"],
     )
     prompts_chain: list[str] = Field(
-        description="Ordered prompts forming the extraction workflow; each prompt is a clear, atomic step."
-        " Output of each prompt is used as input for the next prompt. Last prompt should return the desired response."
-        " Don't overengineer the prompts chain, if you think that one prompt is enough, then use only one prompt.",
+        description=(
+            "Ordered prompts forming the extraction workflow. Each prompt must be a complete, standalone LLM instruction. "
+            "Use a SINGLE prompt unless multi-step reasoning demonstrably improves accuracy.\n\n"
+            "PROMPT FORMAT RULES:\n"
+            "- KEY_VALUE_PAIR (SCALAR or LIST): ALWAYS use the structured template.\n"
+            "- STRING / BOOLEAN with non-trivial extraction logic: use the structured template.\n"
+            "- STRING / BOOLEAN simple/unambiguous: one concise sentence is sufficient.\n\n"
+            "STRUCTURED TEMPLATE — mandatory sections (in order):\n"
+            "  ## Objective — extraction role, field name, section, IMPORTANT RULE, return instruction\n"
+            "  ## Field Instructions — per entry: Context, Field Labels, What to capture (key/value/alias), Extraction Instructions\n"
+            "  ## Disambiguation Rules — label proximity, structured vs narrative preference, conflict resolution, empty-value handling\n"
+            "  ## Normalization — whitespace trimming, field-specific formatting\n"
+            "  ## Transformation Rules — OPTIONAL, include only if user explicitly requested transformation\n\n"
+            "CRITICAL: Replace ALL <...> placeholders and [...] markers with actual content. "
+            "Never leave template placeholders in the final prompt."
+        ),
     )
     response_model: DataShape = Field(description="Desired response structure for the field.")
 
@@ -46,7 +59,14 @@ class CreateGenAIFieldRequest(BaseModel):
 
 class ExecuteLLMExtractionRequest(BaseModel):
     reasoning: str = Field(description="Short hypothesis for this test (<=20 words).")
-    prompts_chain: list[str] = Field(description="Ordered prompts to run for this test.")
+    prompts_chain: list[str] = Field(
+        description=(
+            "Ordered prompts to run for this test. Each prompt must follow the same format rules as in create-genai-field: "
+            "KEY_VALUE_PAIR fields require the structured template (Objective / Field Instructions / "
+            "Disambiguation Rules / Normalization); simple STRING/BOOLEAN fields may use a single sentence. "
+            "Never leave <...> or [...] placeholders in the prompts."
+        ),
+    )
     response_model: DataShape = Field(description="Expected output shape for the test run.")
 
     state: Annotated[AgentState, InjectedState()]

@@ -62,6 +62,7 @@ from deps_ai_fusion.infrastructure.repositories import (
 from deps_ai_fusion.infrastructure.services import (
     CoordinatesProcessor,
     CoordinatesService,
+    InsightProcessor,
     LLMsController,
     ModelCapabilitiesService,
     StaticModelCapabilitiesRegistry,
@@ -356,7 +357,6 @@ class Services(containers.DeclarativeContainer):
         unifier=proxies.unifier,
         coordinates_processor=coordinates_processor,
         capabilities_service=model_capabilities_service,
-        llm_coordinates_enabled=config.llm_coordinates_enabled,
     )
     layout_context_creator: providers.Singleton[ICreateContext[str]] = providers.Singleton(
         PlainLayoutContextCreator,
@@ -518,11 +518,14 @@ class Containers(containers.DeclarativeContainer):
         model_capabilities_service=services.model_capabilities_service,
     )
 
+    insight_processor: providers.Singleton[InsightProcessor] = providers.Singleton(InsightProcessor)
+
     conversation_service: providers.Factory[ConversationService] = providers.Factory(
         ConversationService,
         providers=providers_aggregate,
         conversation_repository=repositories.conversation_repository,
         domain_event_publisher=domain_event_publisher,
+        insight_processor=insight_processor,
     )
 
     analysis_service: providers.Factory[AnalysisService] = providers.Factory(
@@ -530,6 +533,7 @@ class Containers(containers.DeclarativeContainer):
         providers=providers_aggregate,
         storage=proxies.file_storage,
         capabilities_service=services.model_capabilities_service,
+        insight_processor=insight_processor,
     )
 
     agent_service: providers.Factory[AgentService] = providers.Factory(

@@ -69,7 +69,6 @@ class Settings(BaseSettings):
 
     documentation_enabled: bool = True
     instrumentation_enabled: bool = False
-    llm_coordinates_enabled: bool = False
 
     model_capability_overrides: dict[str, dict[str, str]] = Field(
         default_factory=dict,

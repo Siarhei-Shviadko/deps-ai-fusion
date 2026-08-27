@@ -21,6 +21,7 @@ def test_extraction_params_mapper__roundtrip__preserves_extended_fields() -> Non
             "response_format": {"type": "json_object"},
             "model_kwargs": {"x": 1},
         },
+        coordinates_enabled=True,
     )
 
     data = ExtractionParamsMapper.to_dict(original)
@@ -31,6 +32,7 @@ def test_extraction_params_mapper__roundtrip__preserves_extended_fields() -> Non
     assert restored.temperature == original.temperature
     assert restored.top_p == original.top_p
     assert restored.llm_params == original.llm_params
+    assert restored.coordinates_enabled is True
 
 
 def test_extraction_params_mapper__legacy_flat_keys__loads_into_llm_params() -> None:
@@ -61,3 +63,38 @@ def test_extraction_params_mapper__missing_extra_llm_params__defaults_to_empty_d
     restored = ExtractionParamsMapper.from_dict(data)
 
     assert restored.extra_llm_params == {}
+
+
+def test_to_dict__coordinates_enabled_true__serialized() -> None:
+    params = ExtractionParams(coordinates_enabled=True)
+
+    data = ExtractionParamsMapper.to_dict(params)
+
+    assert data["coordinates_enabled"] is True
+
+
+def test_from_dict__coordinates_enabled_present__restored() -> None:
+    data = {
+        "custom_instruction": "ci",
+        "grouping_factor": 2,
+        "temperature": 0.2,
+        "top_p": 0.9,
+        "coordinates_enabled": True,
+    }
+
+    restored = ExtractionParamsMapper.from_dict(data)
+
+    assert restored.coordinates_enabled is True
+
+
+def test_from_dict__coordinates_enabled_missing__defaults_to_false() -> None:
+    data = {
+        "custom_instruction": "ci",
+        "grouping_factor": 2,
+        "temperature": 0.2,
+        "top_p": 0.9,
+    }
+
+    restored = ExtractionParamsMapper.from_dict(data)
+
+    assert restored.coordinates_enabled is False

@@ -42,7 +42,7 @@ class KeyValuePairItemWithAlias(KeyValuePairResponse, _AliasMixin):
 class StringsListWithAliasesResponse(ConfiguredBaseResponseModel):
     items: list[StringItemWithAlias] = Field(
         ...,
-        description="Ordered list of string items, each with an alias.",
+        description="Ordered list of string items, each with an alias, evidence, and self_confidence.",
     )
 
     @classmethod
@@ -64,7 +64,7 @@ class StringsListWithAliasesResponse(ConfiguredBaseResponseModel):
 class BooleansListWithAliasesResponse(ConfiguredBaseResponseModel):
     items: list[BooleanItemWithAlias] = Field(
         ...,
-        description="Ordered list of boolean items, each with an alias.",
+        description="Ordered list of boolean items, each with an alias, evidence, and self_confidence.",
     )
 
     @classmethod
@@ -86,7 +86,7 @@ class BooleansListWithAliasesResponse(ConfiguredBaseResponseModel):
 class KeyValuePairsListWithAliasesResponse(ConfiguredBaseResponseModel):
     items: list[KeyValuePairItemWithAlias] = Field(
         ...,
-        description="Ordered list of key/value pairs, each with an alias.",
+        description="Ordered list of key/value pairs, each with an alias, evidence, and self_confidence.",
     )
 
     @classmethod

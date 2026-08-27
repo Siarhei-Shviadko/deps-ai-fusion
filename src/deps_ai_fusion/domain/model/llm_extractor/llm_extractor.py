@@ -138,6 +138,7 @@ class LLMExtractor:
             page_span=params["page_span"],
             context_attachments=params["context_attachments"],
             extra_llm_params=params["extra_llm_params"],
+            coordinates_enabled=params["coordinates_enabled"],
         )
 
         return self

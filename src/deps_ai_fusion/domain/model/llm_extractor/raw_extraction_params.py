@@ -18,3 +18,4 @@ class RawLLMExtractionParams(TypedDict):
     page_span: RawPageSpan | None
     context_attachments: ContextAttachments | None
     extra_llm_params: dict[str, Any] | None
+    coordinates_enabled: bool

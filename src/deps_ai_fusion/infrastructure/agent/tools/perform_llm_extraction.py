@@ -91,6 +91,7 @@ class PerformLLMExtractionTool(BaseTool):
                 page_span=None,
                 context_attachments=None,
                 extra_llm_params=settings.default_extractor_extra_llm_params,
+                coordinates_enabled=False,
             ),
         )
 

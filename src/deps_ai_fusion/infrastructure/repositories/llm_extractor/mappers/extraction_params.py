@@ -23,6 +23,7 @@ class ExtractionParamsMapper:
             extra_llm_params=raw_extraction_params.get("extra_llm_params", {}),
             page_span=PageSpan.from_dict(page_span) if page_span else None,
             context_attachments=ContextAttachments(context_attachments) if context_attachments else None,
+            coordinates_enabled=raw_extraction_params.get("coordinates_enabled", False),
         )
 
     @staticmethod
@@ -37,4 +38,5 @@ class ExtractionParamsMapper:
             "context_attachments": extraction_params.context_attachments.value
             if extraction_params.context_attachments
             else None,
+            "coordinates_enabled": extraction_params.coordinates_enabled,
         }

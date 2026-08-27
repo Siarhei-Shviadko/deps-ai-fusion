@@ -29,7 +29,7 @@ def test_insights_retrival__success(
         files=raw_insights_retrival_request_data["files"],
     )
 
-    assert {code: llm_response.content for code, llm_response in ri.insights.items()} == {
+    assert {code: processed.content for code, processed in ri.items()} == {
         code: fake_llm_response for code in raw_insights_retrival_request_data["elements"]
     }
 
@@ -46,7 +46,7 @@ def test_insights_retrival__success(
         files=raw_insights_retrival_request_data["files"],
     )
 
-    assert {code: llm_response.content for code, llm_response in ri.insights.items()} == {
+    assert {code: processed.content for code, processed in ri.items()} == {
         code: fake_llm_response for code in raw_insights_retrival_request_data["elements"]
     }
 
