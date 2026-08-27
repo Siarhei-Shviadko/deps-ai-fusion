@@ -16,6 +16,7 @@ class UpdateExtractorParams(BaseLLMParams):
     page_span: SerializedPageSpan | None = Field(None, alias="pageSpan")
     grouping_factor: int = Field(..., ge=1, alias="groupingFactor")
     context_attachments: ContextAttachments | None = Field(None, alias="contextAttachments")
+    coordinates_enabled: bool = Field(False, alias="coordinatesEnabled")
     temperature: float = Field(
         default=0.5,
         ge=0,
@@ -42,6 +43,7 @@ class UpdateExtractorParams(BaseLLMParams):
             "extra_llm_params": extra_llm_params,
             "page_span": self.page_span.to_dict() if self.page_span else None,
             "context_attachments": self.context_attachments if self.context_attachments else None,
+            "coordinates_enabled": self.coordinates_enabled,
         }
 
 

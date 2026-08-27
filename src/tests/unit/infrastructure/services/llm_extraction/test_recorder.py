@@ -44,7 +44,7 @@ def test_record_string_adds_string_field() -> None:
     field = edata.get(query.code)
     assert field is not None
     assert field.data.value == "hello"
-    assert field.data.confidence == 0.77
+    assert field.data.confidence == 0.1
 
 
 def test_record_boolean_adds_checkbox_field() -> None:
@@ -58,7 +58,7 @@ def test_record_boolean_adds_checkbox_field() -> None:
     field = edata.get(query.code)
     assert field is not None
     assert field.data.value.mapped_value is True
-    assert field.data.confidence == 0.77
+    assert field.data.confidence == 0.1
 
 
 def test_record_key_value_pair_adds_field() -> None:
@@ -73,8 +73,8 @@ def test_record_key_value_pair_adds_field() -> None:
     assert field is not None
     assert field.data.key.value == "k"
     assert field.data.value.value == "v"
-    assert field.data.key.confidence == 0.77
-    assert field.data.value.confidence == 0.77
+    assert field.data.key.confidence == 0.1
+    assert field.data.value.confidence == 0.1
 
 
 def test_record_strings_list_adds_list_field() -> None:

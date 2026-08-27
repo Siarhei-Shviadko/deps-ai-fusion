@@ -104,6 +104,33 @@ def llms_controller_with_fakes(fake_providers_aggregate: FakeProvidersAggregate,
 
 
 @pytest.fixture
+def coordinates_processor_mock(containers: Containers, mocker):
+    mock = mocker.Mock()
+    with containers.services.coordinates_processor.override(mock):
+        yield mock
+
+
+@pytest.fixture
+def llms_controller_with_coordinates_mock(
+    fake_providers_aggregate: FakeProvidersAggregate,
+    mock_extraction,
+    coordinates_processor_mock,
+    containers: Containers,
+):
+    with containers.reset_singletons():
+        yield containers.services.llms_controller()
+
+
+@pytest.fixture
+def llm_extraction_service_with_coordinates_mock(
+    fake_llm_extractor_repository,
+    llms_controller_with_coordinates_mock,
+    containers: Containers,
+) -> LLMExtractionService:
+    return containers.llm_extraction_service()
+
+
+@pytest.fixture
 def fake_file_storage(containers: Containers) -> FakeFileStorage:  # type: ignore
     with containers.proxies.file_storage.override(FakeFileStorage()):
         yield containers.proxies.file_storage()

@@ -43,7 +43,7 @@ def test_chat_request__completion_saved__event_published(
 
     assert saved_conversation is not None
     assert len(saved_conversation.completions) == 1
-    assert completion == list(saved_conversation.completions.values())[0]
+    assert completion.completion == list(saved_conversation.completions.values())[0]
     assert fake_event_publisher.published_events == [
         LLMRequestLogged(
             entity_id=conversation.entity_id(),

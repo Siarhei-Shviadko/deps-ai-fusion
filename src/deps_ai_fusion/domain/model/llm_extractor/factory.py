@@ -45,6 +45,7 @@ class LLMExtractorFactory:
                 else None,
                 context_attachments=extraction_params["context_attachments"],
                 extra_llm_params=extraction_params["extra_llm_params"],
+                coordinates_enabled=extraction_params["coordinates_enabled"],
             )
 
         return ExtractionParams()

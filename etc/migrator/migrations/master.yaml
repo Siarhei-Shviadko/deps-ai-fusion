@@ -13,3 +13,5 @@ databaseChangeLog:
       file: ./migrations/06-move-prompts-to-queries.yaml
   - include:
       file: ./migrations/07-add-insights-table.yaml
+  - include:
+      file: ./migrations/08-add-coordinates-enabled-to-extraction-params.yaml

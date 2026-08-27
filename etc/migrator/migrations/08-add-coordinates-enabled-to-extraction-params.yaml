@@ -1,0 +1,24 @@
+databaseChangeLog:
+  - changeSet:
+      id: 1
+      author: Siarhei Shveadko
+      changes:
+        - sql:
+            splitStatements: true
+            stripComments: true
+            sql: |
+              UPDATE llm_extractor
+              SET extraction_params =
+                  extraction_params || '{"coordinates_enabled": false}'::jsonb
+              WHERE extraction_params IS NOT NULL
+                AND NOT jsonb_exists(extraction_params, 'coordinates_enabled');
+      rollback:
+        - sql:
+            splitStatements: true
+            stripComments: true
+            sql: |
+              UPDATE llm_extractor
+              SET extraction_params = extraction_params - 'coordinates_enabled'
+              WHERE extraction_params IS NOT NULL
+                AND jsonb_exists(extraction_params, 'coordinates_enabled')
+                AND (extraction_params->>'coordinates_enabled') = 'false';

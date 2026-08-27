@@ -3,6 +3,7 @@ from pydantic import Field
 
 from deps_ai_fusion.application.types import ConversationInfo
 from deps_ai_fusion.domain.model.conversation import Conversation
+from deps_ai_fusion.infrastructure.services.processed_insight import ProcessedInsight
 
 from ..base import ConfiguredBaseModel
 from .completion import SerializedCompletion
@@ -18,13 +19,19 @@ class SerializedConversation(ConfiguredBaseModel):
     completions: list[SerializedCompletion]
 
     @classmethod
-    def from_domain(cls, conversation: Conversation) -> "SerializedConversation":
+    def from_domain(
+        cls, conversation: Conversation, processed_completions: dict[str, ProcessedInsight]
+    ) -> "SerializedConversation":
         return cls(
             entity_id=conversation.entity_id(),
             tenant_id=conversation.tenant_id(),
             user_id=conversation.user_id(),
             completions=[
-                SerializedCompletion.from_domain(completion) for completion in conversation.completions.values()
+                SerializedCompletion.from_stored(
+                    completion=completion,
+                    processed=processed_completions[code],
+                )
+                for code, completion in conversation.completions.items()
             ],
         )
 
@@ -36,7 +43,10 @@ class SerializedConversationInfo(ConfiguredBaseModel):
     @classmethod
     def from_dto(cls, info: ConversationInfo) -> "SerializedConversationInfo":
         return cls(
-            conversation=SerializedConversation.from_domain(info.conversation),
+            conversation=SerializedConversation.from_domain(
+                conversation=info.conversation,
+                processed_completions=info.processed_completions,
+            ),
             providers=[
                 SerializedProvider.from_objects(
                     provider=provider,

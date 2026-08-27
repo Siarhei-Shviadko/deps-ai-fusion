@@ -17,7 +17,7 @@ __all__ = [
 class StringsListResponse(ConfiguredBaseResponseModel):
     values: list[StringResponse] = Field(
         ...,
-        description="Ordered list of extracted string values.",
+        description="Ordered list of extracted string values, each with its own evidence and self_confidence.",
     )
 
     @classmethod
@@ -36,7 +36,7 @@ class StringsListResponse(ConfiguredBaseResponseModel):
 class BooleansListResponse(ConfiguredBaseResponseModel):
     values: list[BooleanResponse] = Field(
         ...,
-        description="Ordered list of extracted boolean values.",
+        description="Ordered list of extracted boolean values, each with its own evidence and self_confidence.",
     )
 
     @classmethod
@@ -55,7 +55,7 @@ class BooleansListResponse(ConfiguredBaseResponseModel):
 class KeyValuePairsListResponse(ConfiguredBaseResponseModel):
     items: list[KeyValuePairResponse] = Field(
         ...,
-        description="Ordered list of key/value pairs.",
+        description="Ordered list of key/value pairs, each with its own evidence and self_confidence.",
     )
 
     @classmethod

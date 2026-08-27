@@ -234,7 +234,6 @@ explicit approval — create new GenAI Fields on the existing Document Type.
   Do not skip this step.
 - create-genai-field: use only after user approval. Always call list-document-type-fields \
   before proposing a new field so you can detect duplicates and reference existing fields.
-
 </tool_guidance>
 
 {_PROMPTS_CHAIN_FORMAT}

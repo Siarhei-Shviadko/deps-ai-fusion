@@ -12,6 +12,7 @@ from deps_ai_fusion.domain.model import (
     ILLMExtractorRepository,
     LLMExtractor,
 )
+from tests.factories import ExtractionParamsFactory, LLMExtractorFactory
 
 
 def test_add_query__created(
@@ -196,6 +197,7 @@ def test_update_extractor__ok(
             },
             "pageSpan": {"start": 5, "end": 20},
             "contextAttachments": "original_document",
+            "coordinatesEnabled": True,
         },
     }
 
@@ -220,6 +222,7 @@ def test_update_extractor__ok(
     assert updated_llm_extractor.extraction_params.extra_llm_params["seed"] == data["extractionParams"]["seed"]  # type: ignore
     assert updated_llm_extractor.extraction_params.extra_llm_params["logprobs"] == data["extractionParams"]["logprobs"]  # type: ignore
     assert updated_llm_extractor.extraction_params.context_attachments == data["extractionParams"]["contextAttachments"]  # type: ignore
+    assert updated_llm_extractor.extraction_params.coordinates_enabled is True
     for key, value in data["extractionParams"]["extraModelParams"].items():  # type: ignore
         assert updated_llm_extractor.extraction_params.extra_llm_params[key] == value
 
@@ -360,6 +363,7 @@ def test_get_llm_extractors__ok(
     assert extraction_params["groupingFactor"] == llm_extractor_with_query.extraction_params.grouping_factor
     assert extraction_params["temperature"] == llm_extractor_with_query.extraction_params.temperature
     assert extraction_params["topP"] == llm_extractor_with_query.extraction_params.top_p
+    assert extraction_params["coordinatesEnabled"] == llm_extractor_with_query.extraction_params.coordinates_enabled
     for attr in ["maxTokens", "stop", "seed", "logprobs", "extraModelParams"]:
         assert attr in extraction_params
 
@@ -390,6 +394,7 @@ def test_create_extractor_with_context_attachments__ok(
     mock_extraction_service,
 ):
     mock_extraction_service.create_extractor.return_value = ("document_type_id", "extractor_id")
+    raw_create_llm_extractor_request_data["extractionParams"]["coordinatesEnabled"] = True
 
     url = f"{V1_API_PREFIX}/document-types/llm-extractors"
 
@@ -401,6 +406,80 @@ def test_create_extractor_with_context_attachments__ok(
 
     assert response_data["extractorId"] == "extractor_id"
     assert response_data["documentTypeId"] == "document_type_id"
+    call_kwargs = mock_extraction_service.create_extractor.call_args.kwargs
+    assert call_kwargs["extractor"]["extraction_params"]["coordinates_enabled"] is True
+
+
+def test_create_extractor__coordinates_enabled_omitted__defaults_to_false(
+    raw_create_llm_extractor_request_data: dict[str, Any],
+    authenticated_client: TestClient,
+    mock_extraction_service,
+):
+    mock_extraction_service.create_extractor.return_value = ("document_type_id", "extractor_id")
+    raw_create_llm_extractor_request_data["extractionParams"].pop("coordinatesEnabled", None)
+
+    response = authenticated_client.post(
+        f"{V1_API_PREFIX}/document-types/llm-extractors",
+        json=raw_create_llm_extractor_request_data,
+    )
+
+    assert response.status_code == status.HTTP_201_CREATED
+    call_kwargs = mock_extraction_service.create_extractor.call_args.kwargs
+    assert call_kwargs["extractor"]["extraction_params"]["coordinates_enabled"] is False
+
+
+def test_create_extractor__coordinates_enabled_invalid__unprocessable_entity(
+    raw_create_llm_extractor_request_data: dict[str, Any],
+    authenticated_client: TestClient,
+    mock_extraction_service,
+):
+    raw_create_llm_extractor_request_data["extractionParams"]["coordinatesEnabled"] = "not-a-bool"
+
+    response = authenticated_client.post(
+        f"{V1_API_PREFIX}/document-types/llm-extractors",
+        json=raw_create_llm_extractor_request_data,
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    mock_extraction_service.create_extractor.assert_not_called()
+
+
+def test_update_extractor__coordinates_enabled_omitted__setting_reset_to_false(
+    fake_llm_extractor_repository: ILLMExtractorRepository,
+    authenticated_client: TestClient,
+    llm_extractor_id: str,
+    document_type_id: str,
+    tenant_id: str,
+):
+    llm_extractor = LLMExtractorFactory.create(
+        id_=llm_extractor_id,
+        document_type_id=document_type_id,
+        tenant_id=tenant_id,
+        extraction_params=ExtractionParamsFactory(coordinates_enabled=True),
+    )
+    llm_extractor.events.clear()
+    fake_llm_extractor_repository.save(llm_extractor)
+
+    url = f"{V1_API_PREFIX}/document-types/{document_type_id}/llm-extractors/{llm_extractor_id}"
+    data = {
+        "name": llm_extractor.name,
+        "extractionParams": {
+            "customInstruction": llm_extractor.extraction_params.custom_instruction,
+            "groupingFactor": llm_extractor.extraction_params.grouping_factor,
+            "temperature": llm_extractor.extraction_params.temperature,
+            "topP": llm_extractor.extraction_params.top_p,
+        },
+    }
+
+    response = authenticated_client.put(url, json=data)
+
+    assert response.status_code == status.HTTP_200_OK
+    updated = fake_llm_extractor_repository.find_for_document_type(
+        id_=llm_extractor_id,
+        document_type_id=document_type_id,
+        tenant_id=tenant_id,
+    )
+    assert updated.extraction_params.coordinates_enabled is False
 
 
 def test_update_extractor__update_context_attachments_from_none_to_value__ok(

@@ -84,6 +84,7 @@ def test_save_updated__updated(
         page_span=None,
         context_attachments=None,
         extra_llm_params=None,
+        coordinates_enabled=False,
     )
 
     llm_extractor.update(

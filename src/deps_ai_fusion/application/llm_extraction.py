@@ -141,6 +141,7 @@ class LLMExtractionService:
                 page_span=extraction_params["page_span"],
                 context_attachments=extraction_params["context_attachments"],
                 extra_llm_params=extraction_params["extra_llm_params"],
+                coordinates_enabled=extraction_params["coordinates_enabled"],
                 extractor_id=extractor["extractor_id"],
             )
 
@@ -170,6 +171,7 @@ class LLMExtractionService:
         page_span: RawPageSpan | None = None,
         context_attachments: ContextAttachments | None = None,
         extra_llm_params: dict[str, Any] | None = None,
+        coordinates_enabled: bool = False,
     ) -> None:
         llm_extractor = self._find_llm_extractor_for_document_type(
             extractor_id=extractor_id,
@@ -187,6 +189,7 @@ class LLMExtractionService:
                 page_span=page_span,
                 context_attachments=context_attachments,
                 extra_llm_params=extra_llm_params,
+                coordinates_enabled=coordinates_enabled,
             ),
         )
         self._llm_extractor_repository.save(llm_extractor)

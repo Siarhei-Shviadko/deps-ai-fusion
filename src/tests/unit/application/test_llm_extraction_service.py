@@ -1,6 +1,8 @@
 import uuid
 
 import pytest
+from deps_extracted_data.model import ExtractedDataFactory
+from deps_gen_ai.providers import ProviderCode
 
 from deps_ai_fusion.application import LLMExtractionService
 from deps_ai_fusion.domain.exceptions import (
@@ -8,7 +10,17 @@ from deps_ai_fusion.domain.exceptions import (
     QueryNotFoundError,
 )
 from deps_ai_fusion.domain.model import LLMExtractor, RawDataShape, RawLLMWorkflow
-from tests.fakes import FakeLLMExtractorRepository, FakeProvidersAggregate
+from deps_ai_fusion.infrastructure.proxies.exceptions import ParsingProxyError
+from deps_ai_fusion.messaging.sagas import (
+    CreateLLMExtractorSagaData,
+    CreateLLMExtractorSteps,
+)
+from tests.factories import ExtractionParamsFactory, LLMExtractorFactory, QueryFactory
+from tests.fakes import (
+    FakeExtractionProxy,
+    FakeLLMExtractorRepository,
+    FakeProvidersAggregate,
+)
 
 
 def test_add_query__success(
@@ -283,3 +295,244 @@ def test_delete_query__query_not_found(
             document_type_id=llm_extractor_with_query.document_type_id(),
             tenant_id=llm_extractor_with_query.tenant_id(),
         )
+
+
+def test_create_extractor_step__coordinates_enabled_true__aggregate_saved_with_setting(
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    mock_extraction_proxy: FakeExtractionProxy,
+    tenant_id: str,
+):
+    steps = CreateLLMExtractorSteps(
+        extraction_proxy=mock_extraction_proxy,
+        extractor_repository=fake_llm_extractor_repository,
+    )
+    data = CreateLLMExtractorSagaData(
+        extractor_name="extractor",
+        document_type_name="doc-type",
+        tenant_id=tenant_id,
+        model="model",
+        provider=ProviderCode.EPAM_DIAL,
+        custom_instruction="ci",
+        grouping_factor=3,
+        temperature=0.0,
+        top_p=1.0,
+        page_span=None,
+        context_attachments=None,
+        coordinates_enabled=True,
+    )
+
+    steps.attach_extractor(data)
+    steps.create_extractor(data)
+
+    saved = fake_llm_extractor_repository.find_by_id(data.extractor_id, tenant_id)
+    assert saved is not None
+    assert saved.extraction_params.coordinates_enabled is True
+
+
+def test_create_extractor_step__coordinates_enabled_false__aggregate_saved_disabled(
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    mock_extraction_proxy: FakeExtractionProxy,
+    tenant_id: str,
+):
+    steps = CreateLLMExtractorSteps(
+        extraction_proxy=mock_extraction_proxy,
+        extractor_repository=fake_llm_extractor_repository,
+    )
+    data = CreateLLMExtractorSagaData(
+        extractor_name="extractor",
+        document_type_name="doc-type",
+        tenant_id=tenant_id,
+        model="model",
+        provider=ProviderCode.EPAM_DIAL,
+        custom_instruction="ci",
+        grouping_factor=3,
+        temperature=0.0,
+        top_p=1.0,
+        page_span=None,
+        context_attachments=None,
+        coordinates_enabled=False,
+    )
+
+    steps.attach_extractor(data)
+    steps.create_extractor(data)
+
+    saved = fake_llm_extractor_repository.find_by_id(data.extractor_id, tenant_id)
+    assert saved is not None
+    assert saved.extraction_params.coordinates_enabled is False
+
+
+def test_update_extractor__coordinates_enabled_false__aggregate_saved_disabled(
+    llm_extractor: LLMExtractor,
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    llm_extraction_service: LLMExtractionService,
+):
+    llm_extractor.extraction_params = ExtractionParamsFactory(coordinates_enabled=True)
+    fake_llm_extractor_repository.save(llm_extractor)
+
+    llm_extraction_service.update_extractor(
+        extractor_id=llm_extractor.id(),
+        document_type_id=llm_extractor.document_type_id(),
+        tenant_id=llm_extractor.tenant_id(),
+        name=llm_extractor.name,
+        custom_instruction="updated",
+        grouping_factor=3,
+        temperature=0.0,
+        top_p=1.0,
+        coordinates_enabled=False,
+    )
+
+    saved = fake_llm_extractor_repository.find_for_document_type(
+        id_=llm_extractor.id(),
+        document_type_id=llm_extractor.document_type_id(),
+        tenant_id=llm_extractor.tenant_id(),
+    )
+    assert saved.extraction_params.coordinates_enabled is False
+
+
+def test_update_extractor__repository_failure__infrastructure_error_propagated(
+    llm_extractor: LLMExtractor,
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    llm_extraction_service: LLMExtractionService,
+    mocker,
+):
+    fake_llm_extractor_repository.save(llm_extractor)
+    mocker.patch.object(fake_llm_extractor_repository, "save", side_effect=RuntimeError("db failure"))
+
+    with pytest.raises(RuntimeError, match="db failure"):
+        llm_extraction_service.update_extractor(
+            extractor_id=llm_extractor.id(),
+            document_type_id=llm_extractor.document_type_id(),
+            tenant_id=llm_extractor.tenant_id(),
+            name=llm_extractor.name,
+            custom_instruction="updated",
+            grouping_factor=3,
+            temperature=0.0,
+            top_p=1.0,
+            coordinates_enabled=True,
+        )
+
+
+def test_perform_extraction__coordinates_disabled__processor_not_called(
+    fake_providers_aggregate: FakeProvidersAggregate,
+    mock_extraction,
+    mock_unifier,
+    unifier_proxy_return_value,
+    coordinates_processor_mock,
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    llm_extraction_service_with_coordinates_mock: LLMExtractionService,
+    llm_extractor_with_query: LLMExtractor,
+    tenant_id: str,
+):
+    fake_llm_extractor_repository.save(llm_extractor_with_query)
+    fake_providers_aggregate.set_response("value")
+    mock_extraction.save_extracted_data.return_value = None
+    mock_unifier.get_original_images.return_value = unifier_proxy_return_value
+
+    llm_extraction_service_with_coordinates_mock.perform_extraction(
+        extractor_id=llm_extractor_with_query.id(),
+        tenant_id=tenant_id,
+        document_id="111",
+    )
+
+    coordinates_processor_mock.add_llm_coordinates.assert_not_called()
+    mock_extraction.save_extracted_data.assert_called_once()
+
+
+def test_perform_extraction__coordinates_enabled__enriched_result_saved(
+    fake_providers_aggregate: FakeProvidersAggregate,
+    mock_extraction,
+    coordinates_processor_mock,
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    llm_extraction_service_with_coordinates_mock: LLMExtractionService,
+    tenant_id: str,
+    document_type_id: str,
+):
+    query = QueryFactory.create()
+    extractor = LLMExtractorFactory.create(
+        tenant_id=tenant_id,
+        document_type_id=document_type_id,
+        extraction_params=ExtractionParamsFactory(
+            coordinates_enabled=True,
+            context_attachments=None,
+            page_span=None,
+        ),
+        queries={query.code: query},
+    )
+    extractor.events.clear()
+    fake_llm_extractor_repository.save(extractor)
+    fake_providers_aggregate.set_response("value")
+    enriched = ExtractedDataFactory.make_extracted_data(999)
+    coordinates_processor_mock.add_llm_coordinates.return_value = enriched
+    mock_extraction.save_extracted_data.return_value = None
+
+    llm_extraction_service_with_coordinates_mock.perform_extraction(
+        extractor_id=extractor.id(),
+        tenant_id=tenant_id,
+        document_id="111",
+    )
+
+    coordinates_processor_mock.add_llm_coordinates.assert_called_once()
+    mock_extraction.save_extracted_data.assert_called_once_with(enriched)
+
+
+def test_perform_extraction__coordinate_provider_fails__original_result_saved(
+    fake_providers_aggregate: FakeProvidersAggregate,
+    mock_extraction,
+    coordinates_processor_mock,
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    llm_extraction_service_with_coordinates_mock: LLMExtractionService,
+    tenant_id: str,
+    document_type_id: str,
+):
+    query = QueryFactory.create()
+    extractor = LLMExtractorFactory.create(
+        tenant_id=tenant_id,
+        document_type_id=document_type_id,
+        extraction_params=ExtractionParamsFactory(
+            coordinates_enabled=True,
+            context_attachments=None,
+            page_span=None,
+        ),
+        queries={query.code: query},
+    )
+    extractor.events.clear()
+    fake_llm_extractor_repository.save(extractor)
+    fake_providers_aggregate.set_response("value")
+    coordinates_processor_mock.add_llm_coordinates.side_effect = ParsingProxyError("fail")
+    mock_extraction.save_extracted_data.return_value = None
+
+    llm_extraction_service_with_coordinates_mock.perform_extraction(
+        extractor_id=extractor.id(),
+        tenant_id=tenant_id,
+        document_id="111",
+    )
+
+    mock_extraction.save_extracted_data.assert_called_once()
+    saved = mock_extraction.save_extracted_data.call_args.args[0]
+    assert saved is not None
+
+
+def test_perform_extraction__extracted_data_save_fails__error_propagated(
+    fake_providers_aggregate: FakeProvidersAggregate,
+    mock_extraction,
+    mock_unifier,
+    unifier_proxy_return_value,
+    coordinates_processor_mock,
+    fake_llm_extractor_repository: FakeLLMExtractorRepository,
+    llm_extraction_service_with_coordinates_mock: LLMExtractionService,
+    llm_extractor_with_query: LLMExtractor,
+    tenant_id: str,
+):
+    fake_llm_extractor_repository.save(llm_extractor_with_query)
+    fake_providers_aggregate.set_response("value")
+    mock_unifier.get_original_images.return_value = unifier_proxy_return_value
+    mock_extraction.save_extracted_data.side_effect = RuntimeError("core save failed")
+
+    with pytest.raises(RuntimeError, match="core save failed"):
+        llm_extraction_service_with_coordinates_mock.perform_extraction(
+            extractor_id=llm_extractor_with_query.id(),
+            tenant_id=tenant_id,
+            document_id="111",
+        )
+
+    coordinates_processor_mock.add_llm_coordinates.assert_not_called()

@@ -1,3 +1,6 @@
+import pytest
+
+from deps_ai_fusion.domain.exceptions import IllegalArgument
 from deps_ai_fusion.domain.model import ExtractionParams
 
 
@@ -28,6 +31,7 @@ def test_extraction_params__with_all_parameters__ok():
             "seed": 42,
             "model_kwargs": {"a": 1},
         },
+        coordinates_enabled=True,
     )
 
     assert params.custom_instruction == "Extract data"
@@ -38,6 +42,7 @@ def test_extraction_params__with_all_parameters__ok():
     assert params.extra_llm_params["stop"] == ["END"]
     assert params.extra_llm_params["seed"] == 42
     assert params.extra_llm_params["model_kwargs"] == {"a": 1}
+    assert params.coordinates_enabled is True
 
 
 def test_extraction_params__default_to_none__ok():
@@ -49,3 +54,34 @@ def test_extraction_params__default_to_none__ok():
     assert params.llm_params.get("max_tokens") is None
     assert params.llm_params.get("stop") is None
     assert params.llm_params.get("seed") is None
+
+
+def test_create__coordinates_enabled_true__stored_in_extraction_params():
+    params = ExtractionParams(coordinates_enabled=True)
+
+    assert params.coordinates_enabled is True
+
+
+def test_create__coordinates_enabled_omitted__defaults_to_false():
+    params = ExtractionParams()
+
+    assert params.coordinates_enabled is False
+
+
+def test_update_extraction_params__coordinates_enabled_changed__new_value_stored():
+    params = ExtractionParams(coordinates_enabled=False)
+
+    updated = params.create_updated(
+        custom_instruction=params.custom_instruction,
+        grouping_factor=params.grouping_factor,
+        temperature=params.temperature,
+        top_p=params.top_p,
+        coordinates_enabled=True,
+    )
+
+    assert updated.coordinates_enabled is True
+
+
+def test_create__coordinates_enabled_invalid_type__illegal_argument_raised():
+    with pytest.raises(IllegalArgument):
+        ExtractionParams(coordinates_enabled="true")  # type: ignore[arg-type]

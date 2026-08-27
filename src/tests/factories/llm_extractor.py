@@ -39,6 +39,7 @@ class ExtractionParamsFactory(factory.Factory):
     top_p: float = factory.LazyFunction(_fake.random.random)
     page_span = factory.SubFactory(PageSpanFactory)
     context_attachments: str = factory.LazyFunction(lambda: random.choice(list(ContextAttachments)))
+    coordinates_enabled: bool = False
 
 
 class LLMReferenceFactory(factory.Factory):

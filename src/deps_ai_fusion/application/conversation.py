@@ -6,14 +6,14 @@ from deps_message_flow.events.publisher import DomainEventPublisher
 from deps_ai_fusion.constants import AI_FUSION_DESTINATION
 from deps_ai_fusion.domain.exceptions import ConversationNotFoundError
 from deps_ai_fusion.domain.model.conversation import (
-    Completion,
     Conversation,
     ConversationFactory,
     IConversationRepository,
 )
+from deps_ai_fusion.infrastructure.services import InsightProcessor
 
 from .structured_outputs import ReasoningResponse
-from .types import ConversationInfo, RawPageSpan
+from .types import CompletionWithInsight, ConversationInfo, RawPageSpan
 
 __all__ = ["ConversationService"]
 
@@ -24,10 +24,12 @@ class ConversationService:
         providers: ProvidersAggregate,
         conversation_repository: IConversationRepository,
         domain_event_publisher: DomainEventPublisher,
+        insight_processor: InsightProcessor,
     ) -> None:
         self._providers = providers
         self._conversation_repository = conversation_repository
         self._domain_event_publisher = domain_event_publisher
+        self._insight_processor = insight_processor
 
     def get_conversation(self, entity_id: str, user_id: str, tenant_id: str) -> ConversationInfo:
         conversation = self._get_or_create_conversation(entity_id=entity_id, user_id=user_id, tenant_id=tenant_id)
@@ -37,11 +39,20 @@ class ConversationService:
             ProviderCode(provider.code): self._providers.models_of(provider=provider.code, include_legacy=False)
             for provider in providers
         }
+        processed_completions = {
+            code: self._insight_processor.process_stored(
+                response=completion.response,
+                field_code=code,
+                fallback_confidence=completion.confidence,
+            )
+            for code, completion in conversation.completions.items()
+        }
 
         return ConversationInfo(
             conversation=conversation,
             providers=providers,
             models=models,
+            processed_completions=processed_completions,
         )
 
     def chat_request(
@@ -54,7 +65,7 @@ class ConversationService:
         question: str,
         page_span: RawPageSpan | None = None,
         files: list[str] | None = None,
-    ) -> Completion:
+    ) -> CompletionWithInsight:
         conversation = self._get_conversation(entity_id=entity_id, user_id=user_id, tenant_id=tenant_id)
         raw_history = conversation.form_history()
 
@@ -72,14 +83,21 @@ class ConversationService:
             provider=provider,
             model=model,
             question=question,
-            response=ReasoningResponse.parse_llm_response(response),
+            response=self._insight_processor.extract_content(response),
             confidence=response.confidence,
         )
 
         self._conversation_repository.save(conversation)
         self._publish_events(conversation)
 
-        return completion
+        return CompletionWithInsight(
+            completion=completion,
+            processed=self._insight_processor.process_stored(
+                response=completion.response,
+                field_code=completion.code,
+                fallback_confidence=completion.confidence,
+            ),
+        )
 
     def clear_conversation(
         self,
